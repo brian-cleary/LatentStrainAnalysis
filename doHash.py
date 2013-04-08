@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import sys, getopt
+import glob, os
+
+help_message = 'usage example: python doHash.py -i /project/home/ -k 49 -s 29'
+if __name__ == "__main__":
+	try:
+		opts, args = getopt.getopt(sys.argv[1:],'hi:k:s:',["inputdir=","kmersize=","hashsize="])
+	except:
+		print help_message
+		sys.exit(2)
+	for opt, arg in opts:
+		if opt in ('-h','--help'):
+			print help_message
+			sys.exit()
+		elif opt in ('-k','--kmersize'):
+			k = arg
+		elif opt in ('-s','--hashsize'):
+			s = arg
+		elif opt in ('-i','--inputdir'):
+			inputdir = arg
+			if inputdir[-1] != '/':
+				inputdir += '/'
+	os.system('mkdir '+inputdir+'hashed_reads')
+	os.system('python create_hash.py -i '+inputdir+'original_reads/ -o '+inputdir+'hashed_reads/ -k '+k+' -s '+s)
+	os.system('python create_jobs.py -j HashReads -i '+inputdir)
+	os.system('bsub < '+inputdir+'HashReads_ArrayJob.q')
+	os.system('python create_jobs.py -j MergeHash -i '+inputdir)
+	os.system('bsub -w "done(HashReads)" < '+inputdir+'MergeHash_ArrayJob.q')
