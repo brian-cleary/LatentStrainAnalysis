@@ -1,5 +1,5 @@
 from bitarray import bitarray
-from ctypes import c_uint8
+from ctypes import c_uint16
 import glob,os
 from collections import defaultdict
 import numpy as np
@@ -12,7 +12,7 @@ class Hash_Counting(LSA):
 		super(Hash_Counting,self).__init__(inputpath,outputpath)
 
 	def hash_counts_from_hashq(self,fileprefix,multi_files=False):
-		H = (c_uint8*2**self.hash_size)()
+		H = (c_uint16*2**self.hash_size)()
 		if multi_files:
 			FP = glob.glob(os.path.join(self.output_path,fileprefix+'.hashq.*'))
 		else:
@@ -24,7 +24,7 @@ class Hash_Counting(LSA):
 				last = f.tell()
 				for a in self.hash_read_generator(f):
 					for b in a[2]:
-						H[b] = min(255,H[b]+1)
+						H[b] = min(65535,H[b]+1)
 			f.close()
 		f0 = open(self.output_path+fileprefix+'.count.hash','wb')
 		f0.write(H)
@@ -33,7 +33,7 @@ class Hash_Counting(LSA):
 
 	def open_count_hash(self,file_path):
 		f = open(file_path,'rb')
-		H = (c_uint8*2**self.hash_size)()
+		H = (c_uint16*2**self.hash_size)()
 		f.readinto(H)
 		f.close()
 		return H
@@ -67,7 +67,7 @@ class Hash_Counting(LSA):
 		f.close()
 	
 	# with many clusters this may throw an error for too many open files
-	def fastq_from_intermediate_output(self,group):
+	def fastq_from_intermediate_output(self,group,sample_id):
 		PF = glob.glob(os.path.join(self.input_path,group+'.*'))
 		Reads = {}
 		F = {}
@@ -75,17 +75,20 @@ class Hash_Counting(LSA):
 			f = open(pf)
 			L = f.readlines()
 			for l in L:
-				l_id,l_score,l_info = l.strip().split('\t')
-				read_id = l_info.split(self.newline_proxy)[0]
-				if read_id not in Reads:
-					Reads[read_id] = (l_info,[])
-				Reads[read_id][1].append((float(l_score),l_id))
+				try:
+					l_id,l_score,l_info = l.strip().split('\t')
+					read_id = l_info.split(self.newline_proxy)[0]
+					if read_id not in Reads:
+						Reads[read_id] = (l_info,[])
+					Reads[read_id][1].append((float(l_score),l_id))
+				except Exception,err:
+					pass
 			f.close()
 		for read_id,values in Reads.iteritems():
 			read_info,partitions = values
 			top_partition = max(partitions)[1]
 			if top_partition not in F:
-				F[top_partition] = open(self.output_path+top_partition+'.fastq','a')
+				F[top_partition] = open(self.output_path+'.'.join([top_partition,sample_id,'fastq',group]),'w')
 			F[top_partition].write(read_info.replace(self.newline_proxy,'\n') + '\n')
 		for f in F.values():
 			f.close()

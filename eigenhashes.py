@@ -24,7 +24,7 @@ class Eigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		return M
 
 	def nonzero_abundances(self,M):
-		NZ = np.array(self.nonzero_cols(M),dtype=uint32)
+		NZ = np.array(self.nonzero_cols(M),dtype=np.uint32)
 		np.save(self.output_path+'nonzero_indices.npy',NZ)
 		return M[:,NZ],NZ
 
@@ -39,16 +39,18 @@ class Eigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			i += 1000000
 		return Nonzeros
 
-	def conditioned_nonzeros(self,M,NZ):
-		total_cols = M.shape[1]
+	def calculate_global_weights(self,M,NZ):
 		GWnz = self.global_entropy_weights(M)
 		np.save(self.output_path+'global_nonzero_weights.npy',GWnz)
-		GW = np.zeros(total_cols,dtype=np.float32)
+		GW = np.zeros(2**self.hash_size,dtype=np.float32)
 		for i in xrange(len(NZ)):
 			GW[NZ[i]] = GWnz[i]
 		NZ = None
 		np.save(self.output_path+'global_weights.npy',GW)
 		GW = None
+		return GWnz
+
+	def conditioned_nonzeros(self,M,GWnz):
 		M = np.log(M + 1)*GWnz
 		GWnz = None
 		np.save(self.output_path+'conditioned_nonzeros.npy',M)
@@ -91,8 +93,8 @@ class Eigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		num_cols = M.shape[1]
 		RC = []
 		while len(RC) < n:
-			r = np.random.randint(0,num_cols-1)
-			if abs(sum(M[:,r])) > 0:
+			r = np.random.randint(0,num_cols)
+			if abs(sum(M[:,r])) > 10**-9:
 				RC.append(M[:,r])
 		return RC
 
@@ -121,18 +123,19 @@ class Eigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		return Clusters
 
 	def distance_block(self,indices,M,C,Cm,ct,max_cluster_fits=1):
-		D = distance.cdist(np.transpose(M[:,indices[0]:indices[1]]),Cm,'cosine')
-		indices = range(indices[0],indices[1])
+		Msum = M[:,indices[0]:indices[1]].sum(0)
+		nonzero_indices = [indices[0]+i for i in range(len(Msum)) if abs(Msum[i])>10**-9]
+		D = distance.cdist(np.transpose(M[:,nonzero_indices]),Cm,'cosine')
 		for i in xrange(D.shape[0]):
 			found_cluster = False
 			MI = D[i,:].argsort()[:max_cluster_fits]
 			for min_i in MI:
 				if D[i,min_i] < 1-ct:
-					C[min_i].append(indices[i])
+					C[min_i].append(nonzero_indices[i])
 					found_cluster = True
 			if not found_cluster:
-				C.append([indices[i]])
-				Cm = np.concatenate((Cm,[M[:,indices[i]]]))
+				C.append([nonzero_indices[i]])
+				Cm = np.concatenate((Cm,[M[:,nonzero_indices[i]]]))
 		return C,Cm
 
 	def cluster_centers(self,C,Cm,M,combine_thresh=.8):

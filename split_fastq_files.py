@@ -25,3 +25,4 @@ if __name__ == "__main__":
 	for fp in FP:
 		os.system('split --bytes='+str(s)+'m '+fp+' '+fp+'.')
 		os.system('rm '+fp)
+		os.system('touch '+fp)

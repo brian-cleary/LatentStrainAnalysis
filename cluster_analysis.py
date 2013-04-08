@@ -14,10 +14,22 @@ class Cluster_Analysis(LSA):
 		self.read_length = 100
 
 	def process_cluster(self,cluster_prefix):
-		total_reads = self.sort_read_pairs(cluster_prefix)
+		total_reads = 0
+		singletons = []
+		pair_channels = [[] for _ in range(self.num_libs)]
+		for sample,lib in self.sample_library.items():
+			try:
+				sample_reads = self.sort_read_pairs(cluster_prefix+'.'+sample)
+			except:
+				sample_reads = 0
+			if sample_reads > 0:
+				singletons.append(self.input_path+'.'.join([cluster_prefix,sample,'singleton','fastq']))
+				pair_channels[lib].append(self.input_path+'.'.join([cluster_prefix,sample,'pairs','fastq']))
+				total_reads += sample_reads
+		pair_channels = [pc for pc in pair_channels if len(pc)>0]
 		ec = total_reads*self.read_length/self.assembly_norm
 		self.assembly_loc = self.output_path+cluster_prefix+self.assembly_suffix
-		self.assemble_cluster(cluster_prefix,exp_cov=max(ec,10),cov_cutoff=max(ec/15,2))
+		self.assemble_cluster(cluster_prefix,singletons,pair_channels,exp_cov=max(ec,10),cov_cutoff=max(ec/15,2))
 		h = []
 		for i in range(29,61,10):
 			try:
@@ -29,10 +41,17 @@ class Cluster_Analysis(LSA):
 		os.system('cp '+self.assembly_loc+'_'+str(range(29,61,10)[amax])+'/contigs.fa '+self.assembly_loc+'contigs.fa')
 		self.align_assembly(cluster_prefix)
 
-	def assemble_cluster(self,cluster_prefix,exp_cov=50,cov_cutoff=15,min_contig=500):
-		read_loc = self.input_path+cluster_prefix
+	def assemble_cluster(self,cluster_prefix,sg,pc,exp_cov=50,cov_cutoff=15,min_contig=500):
 		os.system('mkdir '+self.assembly_loc)
-		os.system('/import/analysis/comp_bio/metagenomics/src/velvet/velveth '+self.assembly_loc+' 29,61,10 -fastq -short '+read_loc+'.singleton.fastq -shortPaired '+read_loc+'.pairs.fastq')
+		i = 1
+		s = []
+		for c in pc:
+			s.append('-shortPaired')
+			if i > 1:
+				s[-1] += str(i)
+			s += c
+			i += 1
+		os.system('/import/analysis/comp_bio/metagenomics/src/velvet/velveth '+self.assembly_loc+' 29,61,10 -fastq -short '+' '.join(sg)+' '+' '.join(s))
 		for i in range(29,61,10):
 			os.system('/import/analysis/comp_bio/metagenomics/src/velvet/velvetg '+self.assembly_loc+'_'+str(i)+'/ -exp_cov '+str(exp_cov)+' -cov_cutoff '+str(cov_cutoff)+' -min_contig_lgth '+str(min_contig))
 
@@ -40,10 +59,14 @@ class Cluster_Analysis(LSA):
 		read_loc = self.input_path+cluster_prefix
 		os.system('/bli/bin/Linux/x86_64/idba_ud-1.0.9/bin/fq2fa '+read_loc+'.pairs.fastq '+read_loc+'.pairs.fasta')
 		os.system('mkdir '+self.assembly_loc)
-		os.system('/bli/bin/Linux/x86_64/idba_ud-1.0.9/bin/idba_ud -r '+read_loc+'.pairs.fastq -o '+self.assembly_loc+' --min_contig '+str(min_contig)+' --pre_correction')
+		os.system('/bli/bin/Linux/x86_64/idba_ud-1.0.9/bin/idba_ud -r '+read_loc+'.pairs.fasta -o '+self.assembly_loc+' --min_contig '+str(min_contig)+' --pre_correction')
 
 	def align_assembly(self,cluster_prefix):
 		os.system('/bli/bin/Linux/x86_64/ncbi-blast-2.2.27/ncbi-blast-2.2.27+/bin/blastn -query '+self.assembly_loc+'contigs.fa -db /import/pool2/projects/mega/search_dbs/prod/BLIS_SEQUENCES/blast/Bacterial_DNA_All_Prokaryotic -task megablast -outfmt "7 qseqid qstart qend sseqid score" -out '+self.output_path+cluster_prefix+'.alignments.txt')
+		os.system('/bli/bin/Linux/x86_64/ncbi-blast-2.2.27/ncbi-blast-2.2.27+/bin/blastn -query '+self.assembly_loc+'contigs.fa -db /import/pool2/projects/mega/search_dbs/prod/BLIS_SEQUENCES/blast/Viral_DNA_All_GenBank_Virus_Sequences -task megablast -outfmt "7 qseqid qstart qend sseqid score" -out '+self.output_path+cluster_prefix+'.viral.alignments.txt')
+
+	def phyler_assembly(self,cluster_prefix):
+		os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/runMetaphyler.pl '+self.assembly_loc+'contigs.fa blastn '+self.output_path+cluster_prefix+'.phyler.blastn 12')
 
 	def assembly_stats(self,cluster_prefix,file_suffix='contigs.fa'):
 		AS = {}
@@ -83,8 +106,19 @@ class Cluster_Analysis(LSA):
 					current_alignments[alignid_querypos] = int(lst[4])
 		return A
 
+	def phyler_stats(self,cluster_prefix,level='genus',type='blastn'):
+		L = open(self.output_path+cluster_prefix+'.'.join(['.phyler',type,level,'taxprof'])).readlines()
+		A = []
+		for l in L[1:]:
+			x = l.strip().split()
+			A.append((x[0],float(x[1]),int(x[2])))
+		return A
+
 	def sort_read_pairs(self,cluster_prefix):
-		f = open(self.input_path+cluster_prefix+'.fastq','r')
+		try:
+			f = open(self.input_path+cluster_prefix+'.fastq','r')
+		except:
+			return 0
 		# this is kind of a bummer since files are *mostly* sorted already
 		sorted_reads = sorted(self.read_generator(f,verbose_ids=True,return_kmers=False,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
 		if len(sorted_reads) > 0:

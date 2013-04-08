@@ -5,6 +5,7 @@ $ mkdir /project/home/original_reads
 $ mv *.fastq /project/home/original_reads
 
 Throughout the analysis, additional directories will be created:
+Logs/
 hashed_reads/
 cluster_vectors/
 cluster_vectors/intermediate_clusters/	<--can be removed after merge_read_clusters.py
@@ -16,23 +17,44 @@ $ python merge_read_pairs.py trimmed.1.fastq trimmed.2.fastq pairs.fastq
 SPLIT THE INPUT FILES TO ALLOW FOR GREATER DISTRIBUTION OF JOBS
 $ python split_fastq_files.py -i /project/home/original_reads -s 1000
 
+$ mkdir /project/home/Logs
+
+SEMI-SUCCINCT PIPELINE
+$ python doHash.py -i /project/home -k 49 -s 29
+$ python doSVD.py -i /project/home
+$ python doPartitions.py -i /project/home
+
+
+VERBOSE PIPELINE
+
 CREATE THE HASH
 $ mkdir /project/home/hashed_reads
 $ python create_hash.py -i /project/home/original_reads/ -o /project/home/hashed_reads/ -k kmer_length -s hash_size
 
 HASH INPUT READS, CREATE HASH COUNTS
+$ python create_jobs.py -j HashReads -i /project/home/
 $ bsub < HashReads_ArrayJob.q
+$ python create_jobs.py -j MergeHash -i /project/home/
 $ bsub < MergeHash_ArrayJob.q
 
-CONDITION, SVD, AND CLUSTER KMER ABUNDANCE MATRIX
+CONDITION, SVD, AND CLUSTER KMER ABUNDANCE MATRIX (streaming)
+$ mkdir /project/home/cluster_vectors
+$ python create_jobs.py -j GlobalWeights -i /project/home/
+$ bsub < GlobalWeights_Job.q
+$ python create_jobs.py -j LSIKmerClusters -i /project/home/
+$ bsub < LSIKmerClusters_Job.q
+CONDITION, SVD, AND CLUSTER KMER ABUNDANCE MATRIX (in memory)
 $ mkdir /project/home/cluster_vectors
 $ bsub < KmerClusters_Job.q
 
 WRITE VERBOSE READS INTO CLUSTERS
 $ mkdir /project/home/cluster_vectors/intermediate_clusters
+$ python create_jobs.py -j ReadPartitions -i /project/home/
 $ bsub < ReadPartitions_ArrayJob.q
 $ mkdir /project/home/read_partitions
-$ bsub < MergeIntermediatePartitions_Job.q
+$ python create_jobs.py -j MergeIntermediatePartitions -i /project/home
+$ bsub < MergeIntermediatePartitions_ArrayJob.q
+$ python merge_partition_parts.py -i /project/home/
 # remove intermediate_clusters/ if all looks good.
 
 ANALYZE CLUSTER CONTENT

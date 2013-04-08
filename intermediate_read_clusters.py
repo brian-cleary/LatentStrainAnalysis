@@ -42,16 +42,18 @@ if __name__ == "__main__":
 	outpart = 0
 	for ci,cf in Cluster_Files:
 		# ignore super clusters and super small clusters
-		if (cluster_sizes[ci] < 0.2*2**hashobject.hash_size) and (cluster_sizes[ci] > .00002*2**hashobject.hash_size):
+		if cluster_sizes[ci] < 0.2*2**hashobject.hash_size:
 			cw = np.load(cf)
-			cluster_weights.append((set(cw),hashobject.global_weights[cw].sum(dtype=np.float64)/global_weight_sum))
-			cluster_keys.append(cf[cf.rfind('/')+1:cf.rfind('.')])
-			total_set_size += len(cw)
-			if total_set_size > 50*10**6:
-				hashobject.membership_generator(cluster_weights,cluster_keys,outpart)
-				cluster_weights = []
-				cluster_keys = []
-				total_set_size = 0
-				outpart += 1
+			cw_sum_prob = hashobject.global_weights[cw].sum(dtype=np.float64)/global_weight_sum
+			if cw_sum_prob > 0.00002:
+				cluster_weights.append((set(cw),cw_sum_prob))
+				cluster_keys.append(cf[cf.rfind('/')+1:cf.rfind('.')])
+				total_set_size += len(cw)
+				if total_set_size > 50*10**6:
+					hashobject.membership_generator(cluster_weights,cluster_keys,outpart)
+					cluster_weights = []
+					cluster_keys = []
+					total_set_size = 0
+					outpart += 1
 	if len(cluster_weights) > 0:
 		hashobject.membership_generator(cluster_weights,cluster_keys,outpart)

@@ -2,7 +2,8 @@
 
 import sys, getopt
 import glob, os
-from numpy import load
+from gensim import corpora
+import numpy as np
 from eigenhashes import Eigenhashes
 
 help_message = 'usage example: python kmer_clusters.py -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/'
@@ -28,12 +29,13 @@ if __name__ == "__main__":
 	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash'))
 	M = hashobject.matrix_from_file_paths(Kmer_Hash_Count_Files)
 	M,NZ = hashobject.nonzero_abundances(M)
-	M = hashobject.conditioned_nonzeros(M,NZ)
+	gwnz = hashobject.calculate_global_weights(M,NZ)
 	NZ = None
+	M = hashobject.conditioned_nonzeros(M,gwnz)
+	gwnz = None
 	# seems to throw segfault with hash size 29 and num_dims > 8
 	ER = hashobject.eigenkmers(M,num_dims=8)
 	M = None
-	C = hashobject.kmer_clusters(ER)
-	NZ = load(hashobject.output_path+'nonzero_indices.npy')
+	NZ = np.load(hashobject.output_path+'nonzero_indices.npy')
 	hashobject.save_clusters(C,NZ)
 
