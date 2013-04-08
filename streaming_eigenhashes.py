@@ -31,37 +31,12 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		return NewCorpus()
 
 	def train_tfidf(self,corpus):
-		doc_freqs = np.ones(2**self.hash_size)
+		doc_freqs = np.ones(2**self.hash_size,dtype=np.float32)
 		total_docs = 2.
 		for doc in corpus:
 			doc_freqs[doc] += 1
 			total_docs += 1.
 		self.global_weights = np.log2(total_docs/doc_freqs)
-
-	def corpus_from_kmers(self,rc=None):
-		if not hasattr(self,'H'):
-			self.hash_matrix_norms()
-		if rc == None:
-			rc = xrange(self.H.shape[1])
-		class NewCorpus(object):
-			def __iter__(newself):
-				for h in rc:
-					n = np.nonzero(self.H[:,h])[0]
-					K = [(x,self.H[x,h]/self.Norms[x]*self.global_weights[h]) for x in n]
-					if h%10**7 == 0:
-						print 'yielded '+str(h)+' kmers'
-					yield K
-		return NewCorpus()
-
-	# It's not required to hold this in memory.
-	def hash_matrix_norms(self):
-		H = np.zeros((len(self.path_dict),2**self.hash_size),dtype=np.uint16)
-		Norms = []
-		for i in range(H.shape[0]):
-			H[i,:] = self.open_count_hash(self.path_dict[i])
-			Norms.append(np.linalg.norm(H[i,:])/H.shape[1]**.5)
-		self.H = H
-		self.Norms = Norms
 
 	def kmer_corpus_to_disk(self,fp):
 		H = np.array(self.open_count_hash(fp),dtype=np.float32)
@@ -101,7 +76,6 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 		return models.LsiModel(kmer_corpus,num_topics=num_dims,id2word=self.path_dict,distributed=True,chunksize=200000)
 
-	# IF H ISN'T HELD IN MEMORY NEED TO BE CAREFUL WITH cluster_iters
 	def lsi_kmer_clusters(self,lsi,random_chunk=0.0001,cluster_thresh=0.85,cluster_iters=100):
 		Clusters = {}
 		Index = np.zeros((0,lsi.num_topics))
@@ -112,8 +86,8 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			Clusters,Index = self.collapse_index(Index,Clusters)
 			print ci,len(Clusters)
 		Clusters = [[] for _ in range(Index.shape[0])]
-		for j in range(0,self.H.shape[1],10**7):
-			block = [((i,10**5),lsi,Index,cluster_thresh,self.input_path,self.output_path,self.path_dict) for i in range(j,min(j+10**7,self.H.shape[1]),10**5)]
+		for j in range(0,2**self.hash_size,10**7):
+			block = [((i,10**5),lsi,Index,cluster_thresh,self.input_path,self.output_path,self.path_dict) for i in range(j,min(j+10**7,2**self.hash_size),10**5)]
 			results = self.pool.map(distance_pool,block)
 			for r in results:
 				for i in range(len(Clusters)):
