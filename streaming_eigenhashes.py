@@ -85,16 +85,19 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			Clusters,Index = self.merge_index(seed_vectors,Index,Clusters)
 			Clusters,Index = self.collapse_index(Index,Clusters)
 			print ci,len(Clusters)
-		Clusters = [[] for _ in range(Index.shape[0])]
+		Clusters = [np.empty((2**self.hash_size,),dtype=np.int64) for _ in range(Index.shape[0])]
+		Sizes = np.zeros(Index.shape[0],dtype=np.int64)
 		for j in range(0,2**self.hash_size,10**7):
 			block = [((i,10**5),lsi,Index,cluster_thresh,self.input_path,self.output_path,self.path_dict) for i in range(j,min(j+10**7,2**self.hash_size),10**5)]
 			results = self.pool.map(distance_pool,block)
 			for r in results:
 				for i in range(len(Clusters)):
-					Clusters[i] += r[i]
+					for x in enumerate(r[i]):
+						Clusters[i][Sizes[i]+x[0]] = x[1]
+					Sizes[i] += len(r[i])
 		self.pool.close()
 		self.pool.join()
-		return Clusters
+		return [Clusters[i][:Sizes[i]] for i in range(len(Clusters))]
 
 	def merge_index(self,V,I,C,thresh=0.85):
 		MergeFits = defaultdict(list)

@@ -3,7 +3,7 @@
 import sys, getopt
 import glob,os
 
-help_message = 'usage example: python merge_partition_parts.py -i /project/home/cluster_vectors/intermediate_clusters/'
+help_message = 'usage example: python merge_partition_parts.py -i /project/home/read_partitions'
 if __name__ == "__main__":
 	try:
 		opts, args = getopt.getopt(sys.argv[1:],'hi:',["inputdir="])

@@ -40,6 +40,7 @@ class Cluster_Analysis(LSA):
 		amax = argmax(h)
 		os.system('cp '+self.assembly_loc+'_'+str(range(29,61,10)[amax])+'/contigs.fa '+self.assembly_loc+'contigs.fa')
 		self.align_assembly(cluster_prefix)
+		self.phyler_assembly(cluster_prefix)
 
 	def assemble_cluster(self,cluster_prefix,sg,pc,exp_cov=50,cov_cutoff=15,min_contig=500):
 		os.system('mkdir '+self.assembly_loc)
@@ -66,7 +67,7 @@ class Cluster_Analysis(LSA):
 		os.system('/bli/bin/Linux/x86_64/ncbi-blast-2.2.27/ncbi-blast-2.2.27+/bin/blastn -query '+self.assembly_loc+'contigs.fa -db /import/pool2/projects/mega/search_dbs/prod/BLIS_SEQUENCES/blast/Viral_DNA_All_GenBank_Virus_Sequences -task megablast -outfmt "7 qseqid qstart qend sseqid score" -out '+self.output_path+cluster_prefix+'.viral.alignments.txt')
 
 	def phyler_assembly(self,cluster_prefix):
-		os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/runMetaphyler.pl '+self.assembly_loc+'contigs.fa blastn '+self.output_path+cluster_prefix+'.phyler.blastn 12')
+		os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/runMetaphyler.pl '+self.assembly_loc+'contigs.fa blastn '+self.output_path+cluster_prefix+'.phyler.blastn 4')
 
 	def assembly_stats(self,cluster_prefix,file_suffix='contigs.fa'):
 		AS = {}
@@ -120,7 +121,7 @@ class Cluster_Analysis(LSA):
 		except:
 			return 0
 		# this is kind of a bummer since files are *mostly* sorted already
-		sorted_reads = sorted(self.read_generator(f,verbose_ids=True,return_kmers=False,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
+		sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
 		if len(sorted_reads) > 0:
 			pair_file = open(self.input_path+cluster_prefix+'.pairs.fastq','w')
 			singleton_file = open(self.input_path+cluster_prefix+'.singleton.fastq','w')
@@ -139,7 +140,7 @@ class Cluster_Analysis(LSA):
 						last = r['_id']
 					current_id = r_id[:-1]
 				total_reads += len(sorted_reads)
-				sorted_reads = sorted(self.read_generator(f,verbose_ids=True,return_kmers=False,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
+				sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
 			pair_file.close()
 			singleton_file.close()
 			f.close()

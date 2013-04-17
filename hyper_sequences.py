@@ -48,35 +48,30 @@ class Hyper_Sequences(LSA):
 	def coords_to_bins(self,A,C,reverse_compliments=True):
 		num_wheels = self.Wheels[-1]['w'] + 1
 		num_spokes = self.Wheels[-1]['s'] + 1
-		pow2 = [2**j for j in range(num_spokes)]
+		pow2 = np.array([2**j for j in range(num_spokes)])
+		Wc = np.array([w['c'] for w in self.Wheels])
+		C = np.array(C)
 		L = np.dot(C,np.transpose([w['p'] for w in self.Wheels]).conjugate())
-		L -= [w['c'] for w in self.Wheels]
-		L = np.int_((np.sign(L) + 1)/2)
-		B = [np.dot(L[:,ws:ws+num_spokes],pow2) for ws in range(0,num_wheels*num_spokes,num_spokes)]
+		B = [np.dot((L[:,ws:ws+num_spokes] > Wc[ws:ws+num_spokes]),pow2) for ws in range(0,num_wheels*num_spokes,num_spokes)]
 		if reverse_compliments:
-			L = np.dot(np.array(C)[:,::-1]*-1,np.transpose([w['p'] for w in self.Wheels]).conjugate())
-			L -= [w['c'] for w in self.Wheels]
-			L = np.int_((np.sign(L) + 1)/2)
-			B2 = [np.dot(L[:,ws:ws+num_spokes],pow2) for ws in range(0,num_wheels*num_spokes,num_spokes)]
-			return A,[[self.pick_one_from_rc_pair(B[i][j],B2[i][j]) for j in range(len(B[i]))] for i in range(len(B))]
+			L = np.dot(C[:,::-1]*-1,np.transpose([w['p'] for w in self.Wheels]).conjugate())
+			B2 = [np.dot((L[:,ws:ws+num_spokes] > Wc[ws:ws+num_spokes]),pow2) for ws in range(0,num_wheels*num_spokes,num_spokes)]
+			return A,self.pick_one_from_rc_pair(B,B2)
 		else:
 			return A,B
 
 	# ONLY NEED TO WRITE DOWN ONE KMER FROM REVERSE COMPLIMENT PAIR
 	def pick_one_from_rc_pair(self,b1,b2,mx=1000000):
-		if (b1 % mx) < (b2 % mx):
-			return b1
-		else:
-			return b2
+		B = [np.array([b1[i],b2[i]]) for i in range(len(b1))]
+		return [b[np.mod(b,mx).argmin(0),range(b.shape[1])] for b in B]
 
-	def generator_to_bins(self,sequence_generator,rc=True,return_terminals=False):
+	def generator_to_bins(self,sequence_generator,rc=True):
 		C = []
 		A = []
 		for a,c in self.generator_to_coords(sequence_generator):
-			if return_terminals:
-				a = (a,c[0],c[-1])
-			A.append(a)
-			C.append(c)
+			for i in range(len(c)-self.kmer_size+1):
+				A.append(a)
+				C.append(c[i:i+self.kmer_size])
 		if len(A) > 0:
 			return self.coords_to_bins(A,C,reverse_compliments=rc)
 		else:

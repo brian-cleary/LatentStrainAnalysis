@@ -4,6 +4,7 @@ import glob,os
 from collections import defaultdict
 import numpy as np
 import scipy.stats as stats
+import gzip
 from LSA import LSA
 
 class Hash_Counting(LSA):
@@ -14,11 +15,11 @@ class Hash_Counting(LSA):
 	def hash_counts_from_hashq(self,fileprefix,multi_files=False):
 		H = (c_uint16*2**self.hash_size)()
 		if multi_files:
-			FP = glob.glob(os.path.join(self.output_path,fileprefix+'.hashq.*'))
+			FP = glob.glob(os.path.join(self.output_path,fileprefix+'.*.hashq.*'))
 		else:
 			FP = [self.output_path+fileprefix]
 		for filename in FP:
-			f = open(filename,'r')
+			f = gzip.open(filename)
 			last = None
 			while last != f.tell():
 				last = f.tell()
@@ -46,8 +47,8 @@ class Hash_Counting(LSA):
 		return H
 
 	def membership_generator(self,H,Hkeys,outsuffix,match_thresh=3.84,h1_prob=0.8):
-		f = open(self.infile,'r')
-		g = open(self.outfile + '.' + str(outsuffix),'w')
+		f = gzip.open(self.infile)
+		g = gzip.open(self.outfile + '.' + str(outsuffix),'wb')
 		for a in self.hash_read_generator(f,newline=self.newline_proxy):
 			try:
 				read_set = set(a[2])
@@ -72,9 +73,8 @@ class Hash_Counting(LSA):
 		Reads = {}
 		F = {}
 		for pf in PF:
-			f = open(pf)
-			L = f.readlines()
-			for l in L:
+			f = gzip.open(pf)
+			for l in f:
 				try:
 					l_id,l_score,l_info = l.strip().split('\t')
 					read_id = l_info.split(self.newline_proxy)[0]
@@ -94,7 +94,7 @@ class Hash_Counting(LSA):
 			f.close()
 
 	def collision_report(self):
-		f = open(self.infile)
+		f = gzip.open(self.infile)
 		B = defaultdict(list)
 		N = 0
 		for a in self.hash_read_generator(f,max_reads=10**5):

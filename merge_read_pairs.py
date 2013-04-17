@@ -4,10 +4,7 @@ import sys,os,glob
 
 
 if __name__ == "__main__":
-	prefix = sys.argv[1]
-	pair1 = prefix+'.1.fastq'
-	pair2 = prefix+'.2.fastq'
-	out = prefix+'.fastq'
+	pair1,pair2,out = sys.argv[1:4]
 	f1 = open(pair1)
 	f2 = open(pair2)
 	f0 = open(out,'w')

@@ -22,9 +22,11 @@ if __name__ == "__main__":
 			inputdir = arg
 			if inputdir[-1] != '/':
 				inputdir += '/'
+	os.system('mkdir '+inputdir+'Logs')
 	os.system('mkdir '+inputdir+'hashed_reads')
 	os.system('python create_hash.py -i '+inputdir+'original_reads/ -o '+inputdir+'hashed_reads/ -k '+k+' -s '+s)
-	os.system('python create_jobs.py -j HashReads -i '+inputdir)
-	os.system('bsub < '+inputdir+'HashReads_ArrayJob.q')
-	os.system('python create_jobs.py -j MergeHash -i '+inputdir)
-	os.system('bsub -w "done(HashReads)" < '+inputdir+'MergeHash_ArrayJob.q')
+	if len(glob.glob(os.path.join(inputdir+'hashed_reads','Wheels.txt'))) == 1:
+		os.system('python create_jobs.py -j HashReads -i '+inputdir)
+		os.system('bsub < '+inputdir+'HashReads_ArrayJob.q')
+		os.system('python create_jobs.py -j MergeHash -i '+inputdir)
+		os.system('bsub -w "done(HashReads)" < '+inputdir+'MergeHash_ArrayJob.q')

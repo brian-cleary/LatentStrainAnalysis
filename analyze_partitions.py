@@ -36,16 +36,16 @@ if __name__ == "__main__":
 	Read_Partitions = list(set([fp[fp.rfind('/')+1:fp.index('.cluster')+8] for fp in Read_Partitions]))
 	Processed_Partitions = glob.glob(os.path.join(hashobject.output_path,'*.cluster_velvet/contigs.fa'))
 	Processed_Partitions = [fp[len(hashobject.output_path):fp.index('.cluster')+8] for fp in Processed_Partitions]
-	Read_Partitions = [fp for fp in Read_Partitions if fp not in Processed_Partitions]
 	rp = Read_Partitions[fr]
-	f = open(libdir+'samples_grouped_by_lib.csv')
-	reader = csv.reader(f)
-	hashobject.sample_library = {}
-	i = 0
-	for row in reader:
-		for sample in row:
-			hashobject.sample_library[sample] = i
-		i += 1
-	f.close()
-	hashobject.num_libs = i
-	hashobject.process_cluster(rp)
+	if rp not in Processed_Partitions:
+		f = open(libdir+'samples_grouped_by_lib.csv')
+		reader = csv.reader(f)
+		hashobject.sample_library = {}
+		i = 0
+		for row in reader:
+			for sample in row:
+				hashobject.sample_library[sample] = i
+			i += 1
+		f.close()
+		hashobject.num_libs = i
+		hashobject.process_cluster(rp)

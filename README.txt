@@ -13,18 +13,26 @@ read_partitions/
 
 READ PAIRS ARE EXPECTED TO BE INTERLEAVED
 $ python merge_read_pairs.py trimmed.1.fastq trimmed.2.fastq pairs.fastq
+INPUT FILES SHOULD HAVE NAMES LIKE:
+SampleName.*.fastq
+SampleName.trimmed.fastq
+SampleName.lib1.trimmed.fastq
+SampleName.lib2.trimmed.fastq
+# data with the same "SampleName" prefix will be pooled for the purpose of finding the SVD, but will remain separate for assembling with variable library sizes.
 
 SPLIT THE INPUT FILES TO ALLOW FOR GREATER DISTRIBUTION OF JOBS
 $ python split_fastq_files.py -i /project/home/original_reads -s 1000
 
 $ mkdir /project/home/Logs
 
+# Default process:
 SEMI-SUCCINCT PIPELINE
-$ python doHash.py -i /project/home -k 49 -s 29
+$ python doHash.py -i /project/home -k 41 -s 30
 $ python doSVD.py -i /project/home
 $ python doPartitions.py -i /project/home
 
 
+# Step-by-step process:
 VERBOSE PIPELINE
 
 CREATE THE HASH

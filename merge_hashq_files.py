@@ -26,9 +26,15 @@ if __name__ == "__main__":
 				outputdir += '/'
 	import glob, os
 	FP = glob.glob(os.path.join(inputdir,'*.hashq.*'))
-	FP = list(set([fp[:-3] for fp in FP]))
-	fp = FP[fr]
-	file_prefix = fp[fp.rfind('/')+1:]
-	file_prefix = file_prefix[:file_prefix.index('.')]
+	FP = [fp[fp.rfind('/')+1:] for fp in FP]
+	FP = list(set([fp[:fp.index('.')] for fp in FP]))
+	file_prefix = FP[fr]
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	H = hashobject.hash_counts_from_hashq(file_prefix,multi_files=True)
+	count_sum = 0
+	num_nonzeros = 0
+	for x in H:
+		if x != 0:
+			count_sum += x
+			num_nonzeros += 1
+	print '%s.count.hash has %d nonzero elements with a total of %d observations' % (file_prefix,num_nonzeros,count_sum)

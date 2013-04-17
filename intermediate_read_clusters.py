@@ -30,7 +30,7 @@ if __name__ == "__main__":
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	Hashq_Files = glob.glob(os.path.join(hashobject.input_path,'*.hashq.*'))
 	hashobject.infile = Hashq_Files[fr]
-	hashobject.outfile = hashobject.output_path + '/intermediate_clusters/' + str(fr)
+	hashobject.outfile = hashobject.output_path + 'intermediate_clusters/' + str(fr)
 	hashobject.global_weights = np.load(hashobject.output_path + 'global_weights.npy')
 	global_weight_sum = hashobject.global_weights.sum(dtype=np.float64)
 	Cluster_Files = glob.glob(os.path.join(hashobject.output_path,'*.cluster.npy'))
