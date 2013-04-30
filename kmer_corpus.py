@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, getopt
 import glob, os
 import numpy as np

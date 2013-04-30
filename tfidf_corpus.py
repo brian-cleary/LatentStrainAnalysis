@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys, getopt
 import glob, os
 from gensim import corpora
@@ -23,7 +25,7 @@ if __name__ == "__main__":
 			outputdir = arg
 			if outputdir[-1] != '/':
 				outputdir += '/'
-	hashobject = StreamingEigenhashes(inputdir,outputdir)
+	hashobject = StreamingEigenhashes(inputdir,outputdir,get_pool=False)
 	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash'))
 	corpus_generator = hashobject.corpus_idf_from_hash_paths(Kmer_Hash_Count_Files)
 	hashobject.train_tfidf(corpus_generator)

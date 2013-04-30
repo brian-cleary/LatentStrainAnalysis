@@ -1,5 +1,6 @@
 from random import randint
 import glob,os
+import numpy as np
 from LSA import LSA
 from hyper_sequences import Hyper_Sequences
 from hash_counting import Hash_Counting
@@ -33,7 +34,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 				if len(read_strings) == 5:
 					try:
 						I = newline.join(read_strings[:-1])
-						B = [int(c) for c in read_strings[-1][10:-2].split(',')]
+						B = np.fromstring(read_strings[-1][10:-2],dtype=np.uint64,sep=',')
 						yield (I,B[0],B[1:])
 					except Exception,err:
 						print str(err)

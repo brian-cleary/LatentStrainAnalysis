@@ -45,7 +45,6 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		X[:] = H*self.global_weights/norm
 		del X
 
-	# Much better to use np.loadtxt, once that has functionality to read n lines
 	def kmer_corpus_from_disk(self,o=None):
 		if o == None:
 			o = (0,2**self.hash_size)
@@ -59,7 +58,8 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 				while True:
 					H = self.new_chunk(F,n=min(10000,o[1]-rows_processed))
 					for h in H:
-						yield [x for x in enumerate(h) if x[1]!=0]
+						nz = np.nonzero(h)[0]
+						yield [(x,h[x]) for x in nz]
 					rows_processed += H.shape[0]
 					if (rows_processed >= o[1]) or (H.shape[0] == 0):
 						break

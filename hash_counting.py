@@ -19,14 +19,17 @@ class Hash_Counting(LSA):
 		else:
 			FP = [self.output_path+fileprefix]
 		for filename in FP:
-			f = gzip.open(filename)
-			last = None
-			while last != f.tell():
-				last = f.tell()
+			try:
+				f = gzip.open(filename)
 				for a in self.hash_read_generator(f):
-					for b in a[2]:
-						H[b] = min(65535,H[b]+1)
-			f.close()
+					try:
+						for b in a[2]:
+							H[b] = min(65535,H[b]+1)
+					except Exception,err:
+						print Exception,str(err)
+				f.close()
+			except Exception,err:
+				print 'ERROR processing '+filename,Exception,str(err)
 		f0 = open(self.output_path+fileprefix+'.count.hash','wb')
 		f0.write(H)
 		f0.close()
@@ -53,12 +56,15 @@ class Hash_Counting(LSA):
 			try:
 				read_set = set(a[2])
 				read_match_sum = self.global_weights[a[2]].sum(dtype=np.float64)
+				v1 = read_match_sum*h1_prob*(1-h1_prob)
+				m1 = read_match_sum*h1_prob
 				for h in range(len(H)):
 					sect_sum = self.global_weights[list(read_set & H[h][0])].sum(dtype=np.float64)
 					if sect_sum > read_match_sum*H[h][1]:
-						# we could also round to integers, then use binom.pmf
 						# log ratio of Pr( instersection size | cluster size, p=h1_prob ) to Pr( intersection size | cluster size, p=(cluster size)/(total size))
-						log_likelihood_ratio = np.log(stats.norm.pdf(sect_sum,read_match_sum*h1_prob,(read_match_sum*h1_prob*(1-h1_prob))**.5)/stats.norm.pdf(sect_sum,read_match_sum*H[h][1],(read_match_sum*H[h][1]*(1-H[h][1]))**.5))
+						v2 = read_match_sum*H[h][1]*(1-H[h][1])
+						m2 = read_match_sum*H[h][1]
+						log_likelihood_ratio = np.log(v2**.5/v1**.5) + .5*((sect_sum-m2)**2/v2 - (sect_sum-m1)**2/v1)
 						if log_likelihood_ratio > match_thresh:
 							g.write('%s\t%f\t%s' % (Hkeys[h],log_likelihood_ratio,a[0]))
 							g.write('\n')
