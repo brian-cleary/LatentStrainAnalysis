@@ -4,6 +4,7 @@ import sys, getopt
 import glob, os
 import subprocess
 import numpy as np
+from collections import defaultdict
 from streaming_eigenhashes import StreamingEigenhashes
 
 help_message = 'usage example: python kmer_clusters.py -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/'
@@ -31,7 +32,8 @@ if __name__ == "__main__":
 	for i in range(len(Kmer_Hash_Count_Files)):
 		hashobject.path_dict[i] = Kmer_Hash_Count_Files[i]
 	corpus = hashobject.kmer_corpus_from_disk()
-	lsi = hashobject.train_kmer_lsi(corpus,num_dims=25)
+	# This is a hack. Should do a better job chosing num_dims
+	lsi = hashobject.train_kmer_lsi(corpus,num_dims=len(hashobject.path_dict)*4/5)
 	lsi.save(hashobject.output_path+'kmer_lsi.gensim')
 	C = hashobject.lsi_kmer_clusters(lsi)
 	for i in range(len(C)):
@@ -43,19 +45,24 @@ if __name__ == "__main__":
 	for c in C:
 		CP.append(GW[c].sum(dtype=np.float64)/global_weight_sum)
 	np.save(hashobject.output_path+'cluster_probs.npy',CP)
-	I = dict([(k,iter(v)) for k,v in enumerate(C)])
+	Y = np.memmap(hashobject.output_path+'cluster_vals.npy',dtype=np.float32,mode='w+',shape=GW.shape)
+	Y[:] = GW
+	del Y
+	del GW
+	X = np.memmap(hashobject.output_path+'cluster_cols.npy',dtype=np.int16,mode='w+',shape=(2**hashobject.hash_size,5))
+	I = dict([(k+1,iter(v)) for k,v in enumerate(C)])
 	Ix = defaultdict(list)
 	for k,v in I.items():
 		Ix[v.next()].append(k)
-	f = open(hashobject.output_path+'cluster_cols.txt','w')
-	for i,x in enumerate(GW):
-		if i in Ix:
-			for k in Ix[i]:
-				f.write('%d\t%s\t%f\n' % (i,k,x))
-				try:
-					Ix[I[k].next()].append(k)
-				except:
-					pass
-			del Ix[i]
-	f.close()
+	# should maybe flush at some point
+	while len(Ix)>0:
+		minx = min(Ix.keys())
+		X[minx,:len(Ix[minx])] = Ix[minx]
+		for k in Ix[minx]:
+			try:
+				Ix[I[k].next()].append(k)
+			except:
+				pass
+		del Ix[minx]
+	del X
 	

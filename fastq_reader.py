@@ -24,13 +24,33 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 			self.hash_size = new_hash[0]
 			self.kmer_size = new_hash[1]
 
+	# A VERY HACKED METHOD FOR DETERMINING READ PAIR ID NAMEOLOGY (ie readid/1,readid/2 vs readid 1,readid 2)
+	def id_type(self,f):
+		initial_pos = f.tell()
+		L = [f.readline() for _ in range(15)]
+		Ids = [l.strip().split() for l in L if l[0]=='@']
+		pair_type = None
+		for i in range(len(Ids)-1):
+			if (Ids[i][0] == Ids[i+1][0]):
+				if (Ids[i][1][0] == '1') and (Ids[i+1][1][0] == '2') and (Ids[i][1][1:] == Ids[i+1][1][1:]):
+					pair_type = 1
+					break
+			elif (Ids[i][0][:-1] == Ids[i+1][0][:-1]):
+				if (Ids[i][0][-2:] == '/1') and (Ids[i+1][0][-2:] == '/2'):
+					pair_type = 2
+					break
+		f.seek(initial_pos)
+		return pair_type
+
 	# Replace with hashq_read_mapper style that doesn't use read_until_new
 	def hash_read_generator(self,file_object,max_reads=10**15,newline='\n'):
 		line = file_object.readline().strip()
+		lastlinechar = ''
 		read_strings = []
 		r = 0
 		while (line != '') and (r < max_reads):
-			if line[0] == '@':
+			# read_id (always) and quality (sometimes) begin with '@', but quality preceded by '+' 
+			if (line[0] == '@') and (lastlinechar != '+'):
 				if len(read_strings) == 5:
 					try:
 						I = newline.join(read_strings[:-1])
@@ -41,6 +61,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 					r += 1
 				read_strings = []
 			read_strings.append(line)
+			lastlinechar = line[0]
 			line = file_object.readline().strip()
 
 	def read_generator(self,file_object,max_reads=10**15,verbose_ids=False):
@@ -88,7 +109,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 
 	def rand_kmers_for_wheel(self,total_kmers):
 		RP = glob.glob(os.path.join(self.input_path,'*.fastq.*'))
-		kmers_per_file = min(total_kmers/len(RP),5)
+		kmers_per_file = max(total_kmers/len(RP),5)
 		g = open(self.input_path+'random_kmers.fastq','w')
 		for rp in RP:
 			f = open(rp)

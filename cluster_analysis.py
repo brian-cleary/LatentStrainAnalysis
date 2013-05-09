@@ -120,6 +120,7 @@ class Cluster_Analysis(LSA):
 			f = open(self.input_path+cluster_prefix+'.fastq','r')
 		except:
 			return 0
+		type = self.id_type(f)
 		# this is kind of a bummer since files are *mostly* sorted already
 		sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
 		if len(sorted_reads) > 0:
@@ -130,7 +131,12 @@ class Cluster_Analysis(LSA):
 				current_id = None
 				last = ''
 				for r in sorted_reads:
-					r_id = r['_id'].split('\n')[0].split()[0]
+					if type == 1:
+						# use this for readid 1, readid 2 pairs
+						r_id = r['_id'][:r['_id'].index(' ')+2]
+					elif type == 2:
+						# use this for readid/1, readid/2 pairs
+						r_id = r['_id'].split()[0]
 					if r_id[:-1] == current_id:
 						pair_file.write(last)
 						pair_file.write(r['_id'])

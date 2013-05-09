@@ -11,9 +11,14 @@ JobParams = {
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python hash_fastq_reads.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/original_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'MergeHash': {
 		'outfile': """MergeHash_ArrayJob.q""",
-		'array': ["""original_reads/""","""*.fastq""",True],
-		'header': ["""#BSUB -J MergeHash[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeHash-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeHash-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=20192]'""","""#BSUB -M 20097152"""],
+		'array': ["""original_reads/""","""*.fastq""",5],
+		'header': ["""#BSUB -J MergeHash[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeHash-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeHash-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=20192]'""","""#BSUB -M 22097152"""],
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_hashq_files.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/hashed_reads/"""]},
+	'CombineFractions': {
+		'outfile': """CombineFractions_ArrayJob.q""",
+		'array': ["""original_reads/""","""*.fastq""",1],
+		'header': ["""#BSUB -J CombineFractions[1-""","""#BSUB -o PROJECT_HOME/Logs/CombineFractions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/CombineFractions-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=30192]'""","""#BSUB -M 52097152"""],
+		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_hashq_fractions.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'GlobalWeights': {
 		'outfile': """GlobalWeights_Job.q""",
 		'header': ["""#BSUB -J GlobalWeights""","""#BSUB -o PROJECT_HOME/Logs/GlobalWeights-Out.out""","""#BSUB -e PROJECT_HOME/Logs/GlobalWeights-Err.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=84192]'""","""#BSUB -M 132097152"""],
@@ -30,13 +35,13 @@ JobParams = {
 	'ReadPartitions': {
 		'outfile': """ReadPartitions_ArrayJob.q""",
 		'array': ["""hashed_reads/""","""*.hashq.*"""],
-		'header': ["""#BSUB -J ReadPartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/ReadPartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/ReadPartitions-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=13192]'""","""#BSUB -M 20097152"""],
-		'body': ["""sleep ${LSB_JOBINDEX}""","""python intermediate_read_clusters.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
+		'header': ["""#BSUB -J ReadPartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/ReadPartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/ReadPartitions-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=8192]'""","""#BSUB -M 20097152"""],
+		'body': ["""sleep ${LSB_JOBINDEX}""","""python write_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'MergeIntermediatePartitions': {
 		'outfile': """MergeIntermediatePartitions_ArrayJob.q""",
-		'array': ["""hashed_reads/""","""*.hashq.*"""],
-		'header': ["""#BSUB -J MergeIntermediatePartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeIntermediatePartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeIntermediatePartitions-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=25192]'""","""#BSUB -M 40097152"""],
-		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_read_clusters.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/cluster_vectors/intermediate_clusters/ -o PROJECT_HOME/read_partitions/ -H PROJECT_HOME/hashed_reads/"""]}
+		'array': ["""cluster_vectors/""","""*.fastq.*""",1],
+		'header': ["""#BSUB -J MergeIntermediatePartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeIntermediatePartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeIntermediatePartitions-Err-%I.err""","""#BSUB -q short""","""#BSUB -W 1:55""","""#BSUB -M 4097152"""],
+		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/cluster_vectors/ -o PROJECT_HOME/read_partitions/"""]}
 }
 
 CommonElements = {
@@ -75,6 +80,7 @@ if __name__ == "__main__":
 		if len(params['array']) == 3:
 			FP = [fp[fp.rfind('/')+1:] for fp in FP]
 			FP = set([fp[:fp.index('.')] for fp in FP])
+			FP = [None]*len(FP)*params['array'][2]
 		array_size = str(len(FP))
 		params['header'][0] += array_size+']'
 		print job+' array size will be '+array_size

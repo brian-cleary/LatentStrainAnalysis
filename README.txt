@@ -30,6 +30,7 @@ SEMI-SUCCINCT PIPELINE
 $ python doHash.py -i /project/home -k 41 -s 30
 $ python doSVD.py -i /project/home
 $ python doPartitions.py -i /project/home
+$ python doMerge.py -i /project/home
 
 
 # Step-by-step process:
@@ -56,14 +57,11 @@ $ mkdir /project/home/cluster_vectors
 $ bsub < KmerClusters_Job.q
 
 WRITE VERBOSE READS INTO CLUSTERS
-$ mkdir /project/home/cluster_vectors/intermediate_clusters
 $ python create_jobs.py -j ReadPartitions -i /project/home/
 $ bsub < ReadPartitions_ArrayJob.q
 $ mkdir /project/home/read_partitions
 $ python create_jobs.py -j MergeIntermediatePartitions -i /project/home
 $ bsub < MergeIntermediatePartitions_ArrayJob.q
-$ python merge_partition_parts.py -i /project/home/
-# remove intermediate_clusters/ if all looks good.
 
 ANALYZE CLUSTER CONTENT
 $ bsub < PartitionAnalysis_ArrayJob.q

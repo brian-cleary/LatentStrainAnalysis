@@ -28,8 +28,13 @@ if __name__ == "__main__":
 	FP = glob.glob(os.path.join(inputdir,'*.hashq.*'))
 	FP = [fp[fp.rfind('/')+1:] for fp in FP]
 	FP = list(set([fp[:fp.index('.')] for fp in FP]))
-	file_prefix = FP[fr%len(FP)]
-	# SUPER DUMB to hardcode the fraction size
-	file_fraction = fr/len(FP)
+	file_prefix = FP[fr]
 	hashobject = Fastq_Reader(inputdir,outputdir)
-	H = hashobject.hash_counts_from_hashq(file_prefix,multi_files_fraction=file_fraction)
+	H = hashobject.merge_count_fractions(file_prefix)
+	count = 0
+	total = 0
+	for x in H:
+		if x > 0:
+			count += 1
+			total += x
+	print 'sample %s has %d nonzero elements and %d total observed kmers' % (file_prefix,count,total)

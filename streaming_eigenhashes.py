@@ -4,6 +4,7 @@ from gensim import models
 import logging
 from collections import defaultdict
 from multiprocessing import Pool
+from operator import itemgetter
 from LSA import LSA
 from hyper_sequences import Hyper_Sequences
 from hash_counting import Hash_Counting
@@ -72,11 +73,11 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			X[:,j] = np.fromfile(F[j],dtype=np.float32,count=n)
 		return X
 
-	def train_kmer_lsi(self,kmer_corpus,num_dims=10):
+	def train_kmer_lsi(self,kmer_corpus,num_dims=20):
 		logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 		return models.LsiModel(kmer_corpus,num_topics=num_dims,id2word=self.path_dict,distributed=True,chunksize=200000)
 
-	def lsi_kmer_clusters(self,lsi,random_chunk=0.0001,cluster_thresh=0.85,cluster_iters=100):
+	def lsi_kmer_clusters(self,lsi,random_chunk=0.0002,cluster_thresh=0.85,cluster_iters=100):
 		Clusters = {}
 		Index = np.zeros((0,lsi.num_topics))
 		chunk_size = random_chunk*2**self.hash_size

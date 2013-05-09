@@ -12,12 +12,17 @@ class Hash_Counting(LSA):
 	def __init__(self,inputpath,outputpath):
 		super(Hash_Counting,self).__init__(inputpath,outputpath)
 
-	def hash_counts_from_hashq(self,fileprefix,multi_files=False):
+	def hash_counts_from_hashq(self,fileprefix,multi_files_fraction=None):
 		H = (c_uint16*2**self.hash_size)()
-		if multi_files:
+		if multi_files_fraction != None:
 			FP = glob.glob(os.path.join(self.output_path,fileprefix+'.*.hashq.*'))
+			# SUPER DUMB to hardcode the number of fractions (5)
+			FPsplits = [FP[i::5] for i in range(5)]
+			FP = [FP[i] for i in FPsplits[multi_files_fraction]]
+			outfile = self.output_path+fileprefix+'.count.hash.'+str(multi_files_fraction)
 		else:
 			FP = [self.output_path+fileprefix]
+			outfile = self.output_path+fileprefix+'.count.hash'
 		for filename in FP:
 			try:
 				f = gzip.open(filename)
@@ -30,9 +35,27 @@ class Hash_Counting(LSA):
 				f.close()
 			except Exception,err:
 				print 'ERROR processing '+filename,Exception,str(err)
-		f0 = open(self.output_path+fileprefix+'.count.hash','wb')
-		f0.write(H)
-		f0.close()
+		if len(FP) > 0:
+			f0 = open(outfile,'wb')
+			f0.write(H)
+			f0.close()
+		return H
+
+	def merge_count_fractions(self,fileprefix):
+		H = (c_uint16*2**self.hash_size)()
+		FP = glob.glob(os.path.join(self.output_path,fileprefix+'.count.hash.*'))
+		for fp in FP:
+			H1 = self.open_count_hash(fp)
+			# unfortunately we can't just add, due to overflow
+			for i,x in enumerate(H1):
+				if x > 0:
+					H[i] = min(65535,H[i]+x)
+			del H1
+		f = open(self.output_path+fileprefix+'.count.hash','wb')
+		f.write(H)
+		f.close()
+		for fp in FP:
+			os.system('rm '+fp)
 		return H
 
 	def open_count_hash(self,file_path):

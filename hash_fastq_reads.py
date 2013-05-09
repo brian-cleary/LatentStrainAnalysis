@@ -5,23 +5,6 @@ import sys, getopt
 import gzip
 from fastq_reader import Fastq_Reader
 
-# A VERY HACKED METHOD FOR DETERMINING READ PAIR ID NAMEOLOGY (ie readid/1,readid/2 vs readid 1,readid 2)
-def id_type(f):
-	L = [f.readline() for _ in range(15)]
-	Ids = [l.strip().split() for l in L if l[0]=='@']
-	pair_type = None
-	for i in range(len(Ids)-1):
-		if (Ids[i][0] == Ids[i+1][0]):
-			if (Ids[i][1][0] == '1') and (Ids[i+1][1][0] == '2') and (Ids[i][1][1:] == Ids[i+1][1][1:]):
-				pair_type = 1
-				break
-		elif (Ids[i][0][:-1] == Ids[i+1][0][:-1]):
-			if (Ids[i][0][-2:] == '/1') and (Ids[i+1][0][-2:] == '/2'):
-				pair_type = 2
-				break
-	f.seek(0)
-	return pair_type
-
 # PAIRED READ FILES ARE ASSUMED TO BE SORTED
 def kmer_bins(b,A,pfx,outfile,type):
 	current_id = None
@@ -72,6 +55,7 @@ if __name__ == "__main__":
 	file_prefix = file_prefix[file_prefix.rfind('/')+1:file_prefix.index('.fastq')]
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	f = open(hashobject.input_path+file_prefix+'.fastq'+file_split,'r')
+	read_type = hashobject.id_type(f)
 	g = gzip.open(hashobject.output_path+file_prefix+'.hashq'+file_split+'.gz','wb')
 	hashobject.hpfx = hashobject.hpfx + str(hashobject.kmer_size)+','
 	A = []
@@ -79,7 +63,7 @@ if __name__ == "__main__":
 		try:
 			A,B = hashobject.generator_to_bins(hashobject.read_generator(f,max_reads=25000,verbose_ids=True),rc=True)
 			for b in range(len(B)):
-				kmer_bins(B[b],A,hashobject.hpfx,g)
+				kmer_bins(B[b],A,hashobject.hpfx,g,read_type)
 		except Exception,err:
 			print str(err)
 	f.close()
