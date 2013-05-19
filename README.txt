@@ -19,6 +19,7 @@ SampleName.trimmed.fastq
 SampleName.lib1.trimmed.fastq
 SampleName.lib2.trimmed.fastq
 # data with the same "SampleName" prefix will be pooled for the purpose of finding the SVD, but will remain separate for assembling with variable library sizes.
+# Note that the the sub-sample identifier (Name.*.fastq) is important to include, even if there is only one file persample. This allows us to disambiguate sample names which may be the prefix of another sample name
 
 SPLIT THE INPUT FILES TO ALLOW FOR GREATER DISTRIBUTION OF JOBS
 $ python split_fastq_files.py -i /project/home/original_reads -s 1000

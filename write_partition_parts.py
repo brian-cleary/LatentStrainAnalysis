@@ -4,6 +4,7 @@ import glob,os
 import sys,getopt
 import gzip
 import numpy as np
+from bitarray import bitarray
 from collections import defaultdict
 from fastq_reader import Fastq_Reader
 
@@ -30,24 +31,39 @@ def max_log_lik_ratio(s,bkg,h1_prob=0.8,thresh=3.84):
 				LLR.append((llr,k))
 	return max(LLR)[1]
 
-def best_partitions(cols,ids,fcp,fvp,background_probs):
+def get_blocks(Fc,fv,block_size):
+	B = [bitarray() for _ in Fc]
+	for b in range(len(B)):
+		B[b].fromfile(Fc[b],block_size)
+	V = np.fromfile(fv,dtype=np.float32,count=block_size*8)
+	return B,V
+
+def get_x(B,V,x):
+	return [b for b in range(len(B)) if B[b][x]],V[x]
+
+def best_partitions(cols,ids,Fcp,fvp,background_probs,hash_size):
 	BestPartitions = []
 	col_sort = np.argsort(cols)
 	if len(col_sort) > 0:
-		fc = open(fcp)
+		Fc = [open(fcp) for fcp in Fcp]
 		fv = open(fvp)
 		read_ids = np.empty(10**9,dtype=np.uint32)
 		# only 16k clusters allowed here!
 		cluster_ids = np.empty(10**9,dtype=np.int16)
 		cluster_values = np.empty(10**9,dtype=np.float32)
-		last_col = -1
 		ix = 0
+		last_x = None
+		last_block = 0
 		for i in col_sort:
 			r_col = cols[i]
 			r_id = ids[i]
-			if r_col != last_col:
-				col_clusters,col_value = get_col(fc,fv,r_col)
-				last_col = r_col
+			if r_col >= last_block:
+				B,V = get_blocks(Fc,fv,block_size=min(5*10**9/len(Fc),(2**hash_size-last_block)/8))
+				offset = last_block
+				last_block += len(V)
+			if r_col != last_x:
+				col_clusters,col_value = get_x(B,V,int(r_col-offset))
+				last_x = r_col
 			if len(col_clusters) > 0:
 				read_ids[ix] = r_id
 				cluster_ids[ix] = -1
@@ -62,7 +78,7 @@ def best_partitions(cols,ids,fcp,fvp,background_probs):
 		read_ids = read_ids[:ix]
 		cluster_ids = cluster_ids[:ix]
 		cluster_values = cluster_values[:ix]
-		fc.close()
+		Fc = [fc.close() for fc in Fc]
 		fv.close()
 		id_sort = np.argsort(read_ids)
 		if len(id_sort) > 0:
@@ -101,6 +117,10 @@ if __name__ == "__main__":
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	cp = np.load(hashobject.output_path+'cluster_probs.npy')
 	cluster_probs = dict(enumerate(cp))
+	Cluster_Files = glob.glob(os.path.join(hashobject.output_path,'*.bits'))
+	Cluster_Files = [(int(fp[fp.rfind('/')+1:fp.index('.bits')]),fp) for fp in Cluster_Files]
+	Cluster_Files.sort()
+	Cluster_Files = [fp[1] for fp in Cluster_Files]
 	Hashq_Files = glob.glob(os.path.join(hashobject.input_path,'*.hashq.*'))
 	Hashq_Files = [fp for fp in Hashq_Files if '.tmp' not in fp]
 	Hashq_Files.sort()
@@ -116,7 +136,7 @@ if __name__ == "__main__":
 	rx = 0
 	for a in hashobject.hash_read_generator(f):
 		if r_id%10**6 == 0:
-			IdClusters = best_partitions(r_cols[:rx],r_ids[:rx],hashobject.output_path+'cluster_cols.npy',hashobject.output_path+'cluster_vals.npy',cluster_probs)
+			IdClusters = best_partitions(r_cols[:rx],r_ids[:rx],Cluster_Files,hashobject.output_path+'cluster_vals.npy',cluster_probs,hashobject.hash_size)
 			for k,v in IdClusters:
 				if v != None:
 					g_out_tmp.write('%d\t%d\n' % (k,v))
@@ -128,7 +148,7 @@ if __name__ == "__main__":
 			r_ids[rx] = r_id
 			rx += 1
 		r_id += 1
-	IdClusters = best_partitions(r_cols[:rx],r_ids[:rx],hashobject.output_path+'cluster_cols.npy',hashobject.output_path+'cluster_vals.npy',cluster_probs)
+	IdClusters = best_partitions(r_cols[:rx],r_ids[:rx],Cluster_Files,hashobject.output_path+'cluster_vals.npy',cluster_probs,hashobject.hash_size)
 	for k,v in IdClusters:
 		if v != None:
 			g_out_tmp.write('%d\t%d\n' % (k,v))
@@ -141,7 +161,10 @@ if __name__ == "__main__":
 	r_id = 0
 	for a in hashobject.hash_read_generator(f):
 		while mapped_id < r_id:
-			mapped_id,mapped_cluster = np.fromstring(g_out_tmp.readline(),dtype=np.int64,sep='\t')
+			try:
+				mapped_id,mapped_cluster = np.fromstring(g_out_tmp.readline(),dtype=np.int64,sep='\t')
+			except:
+				mapped_id,mapped_cluster = (r_id+.5,None)
 		if mapped_id == r_id:
 			if mapped_cluster not in F:
 				F[mapped_cluster] = open(hashobject.output_path+'.'.join([str(mapped_cluster),sample_id,'fastq',outpart]),'w')

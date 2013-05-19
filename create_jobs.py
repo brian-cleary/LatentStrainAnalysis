@@ -39,7 +39,7 @@ JobParams = {
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python write_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'MergeIntermediatePartitions': {
 		'outfile': """MergeIntermediatePartitions_ArrayJob.q""",
-		'array': ["""cluster_vectors/""","""*.fastq.*""",1],
+		'array': ["""cluster_vectors/""","""*.fastq.*""",-1],
 		'header': ["""#BSUB -J MergeIntermediatePartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeIntermediatePartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeIntermediatePartitions-Err-%I.err""","""#BSUB -q short""","""#BSUB -W 1:55""","""#BSUB -M 4097152"""],
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/cluster_vectors/ -o PROJECT_HOME/read_partitions/"""]}
 }
@@ -79,8 +79,12 @@ if __name__ == "__main__":
 		FP = glob.glob(os.path.join(inputdir+params['array'][0],params['array'][1]))
 		if len(params['array']) == 3:
 			FP = [fp[fp.rfind('/')+1:] for fp in FP]
-			FP = set([fp[:fp.index('.')] for fp in FP])
-			FP = [None]*len(FP)*params['array'][2]
+			if params['array'][2] == -1:
+				suffix = params['array'][1].replace('*','').replace('.','')
+				FP = [fp[:fp.index(suffix)] for fp in FP]
+			else:
+				FP = set([fp[:fp.index('.')] for fp in FP])
+			FP = [None]*len(FP)*abs(params['array'][2])
 		array_size = str(len(FP))
 		params['header'][0] += array_size+']'
 		print job+' array size will be '+array_size

@@ -122,7 +122,10 @@ class Cluster_Analysis(LSA):
 			return 0
 		type = self.id_type(f)
 		# this is kind of a bummer since files are *mostly* sorted already
-		sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
+		if type == 1:
+			sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'][:d['_id'].index(' ')+2])
+		elif type == 2:
+			sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split()[0])
 		if len(sorted_reads) > 0:
 			pair_file = open(self.input_path+cluster_prefix+'.pairs.fastq','w')
 			singleton_file = open(self.input_path+cluster_prefix+'.singleton.fastq','w')
@@ -146,7 +149,10 @@ class Cluster_Analysis(LSA):
 						last = r['_id']
 					current_id = r_id[:-1]
 				total_reads += len(sorted_reads)
-				sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split('\n')[0].split()[0])
+				if type == 1:
+					sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'][:d['_id'].index(' ')+2])
+				elif type == 2:
+					sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split()[0])
 			pair_file.close()
 			singleton_file.close()
 			f.close()

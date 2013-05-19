@@ -18,7 +18,7 @@ class Hash_Counting(LSA):
 			FP = glob.glob(os.path.join(self.output_path,fileprefix+'.*.hashq.*'))
 			# SUPER DUMB to hardcode the number of fractions (5)
 			FPsplits = [FP[i::5] for i in range(5)]
-			FP = [FP[i] for i in FPsplits[multi_files_fraction]]
+			FP = FPsplits[multi_files_fraction]
 			outfile = self.output_path+fileprefix+'.count.hash.'+str(multi_files_fraction)
 		else:
 			FP = [self.output_path+fileprefix]

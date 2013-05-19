@@ -12,16 +12,16 @@ JobParams = {
 	'MergeHash': {
 		'outfile': """MergeHash_ArrayJob.q""",
 		'array': ["""original_reads/""","""*.fastq""",5],
-		'header': ["""#$ -N MergeHash""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -I walltime=71:10:00""","""#$ -l mem=20192mb""","""# -M 22097152"""],
+		'header': ["""#$ -N MergeHash""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -l walltime=71:10:00""","""#$ -l mem=20192mb""","""# -M 22097152"""],
 		'body': ["""sleep ${SGE_TASK_ID}""","""python merge_hashq_files.py -r ${SGE_TASK_ID} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'CombineFractions': {
 		'outfile': """CombineFractions_ArrayJob.q""",
 		'array': ["""original_reads/""","""*.fastq"""],
-		'header': ["""#$ -N CombineFractions""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -I walltime=71:10:00""","""#$ -l mem=30192mb""","""# -M 52097152"""],
+		'header': ["""#$ -N CombineFractions""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -l walltime=71:10:00""","""#$ -l mem=30192mb""","""# -M 52097152"""],
 		'body': ["""sleep ${SGE_TASK_ID}""","""python merge_hashq_fractions.py -r ${SGE_TASK_ID} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'GlobalWeights': {
 		'outfile': """GlobalWeights_Job.q""",
-		'header': ["""#$ -N GlobalWeights""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -I walltime=71:10:00""","""#$ -l mem=84192mb""","""# -M 132097152"""],
+		'header': ["""#$ -N GlobalWeights""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -l walltime=71:10:00""","""#$ -l mem=84192mb""","""# -M 132097152"""],
 		'body': ["""python tfidf_corpus.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'KmerCorpus': {
 		'outfile': """KmerCorpus_ArrayJob.q""",
@@ -35,12 +35,12 @@ JobParams = {
 	'ReadPartitions': {
 		'outfile': """ReadPartitions_ArrayJob.q""",
 		'array': ["""hashed_reads/""","""*.hashq.*"""],
-		'header': ["""#$ -N ReadPartitions""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -I walltime=71:10:00""","""#$ -l mem=8192mb""","""# -M 20097152"""],
+		'header': ["""#$ -N ReadPartitions""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q medium""","""#$ -l walltime=71:10:00""","""#$ -l mem=8192mb""","""# -M 20097152"""],
 		'body': ["""sleep ${SGE_TASK_ID}""","""python write_partition_parts.py -r ${SGE_TASK_ID} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'MergeIntermediatePartitions': {
 		'outfile': """MergeIntermediatePartitions_ArrayJob.q""",
-		'array': ["""cluster_vectors/""","""*.fastq.*""",1],
-		'header': ["""#$ -N MergeIntermediatePartitions""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q short""","""#$ -I walltime=1:55:00""","""# -M 4097152"""],
+		'array': ["""cluster_vectors/""","""*.fastq.*""",-1],
+		'header': ["""#$ -N MergeIntermediatePartitions""","""#$ -t 1-""","""#$ -o PROJECT_HOME/Logs/""","""#$ -e PROJECT_HOME/Logs/""","""# -q short""","""#$ -l walltime=1:55:00""","""# -M 4097152"""],
 		'body': ["""sleep ${SGE_TASK_ID}""","""python merge_partition_parts.py -r ${SGE_TASK_ID} -i PROJECT_HOME/cluster_vectors/ -o PROJECT_HOME/read_partitions/"""]}
 }
 
@@ -79,8 +79,12 @@ if __name__ == "__main__":
 		FP = glob.glob(os.path.join(inputdir+params['array'][0],params['array'][1]))
 		if len(params['array']) == 3:
 			FP = [fp[fp.rfind('/')+1:] for fp in FP]
-			FP = set([fp[:fp.index('.')] for fp in FP])
-			FP = [None]*len(FP)*params['array'][2]
+			if params['array'][2] == -1:
+				suffix = params['array'][1].replace('*','').replace('.','')
+				FP = [fp[:fp.index(suffix)] for fp in FP]
+			else:
+				FP = set([fp[:fp.index('.')] for fp in FP])
+			FP = [None]*len(FP)*abs(params['array'][2])
 		array_size = str(len(FP))
 		params['header'][1] += array_size
 		print job+' array size will be '+array_size

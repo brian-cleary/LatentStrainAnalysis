@@ -39,8 +39,10 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			total_docs += 1.
 		self.global_weights = np.log2(total_docs/doc_freqs)
 
-	def kmer_corpus_to_disk(self,fp):
+	def kmer_corpus_to_disk(self,fp,mask=[]):
 		H = np.array(self.open_count_hash(fp),dtype=np.float32)
+		H[mask] = 0
+		del mask
 		norm = np.linalg.norm(H)/len(H)**.5
 		X = np.memmap(fp+'.conditioned',dtype=np.float32,mode='w+',shape=(len(H),))
 		X[:] = H*self.global_weights/norm
