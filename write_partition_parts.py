@@ -85,9 +85,10 @@ if __name__ == "__main__":
 				c0 = col
 			if len(c) > 0:
 				v = V[ci]
-				outlines[id*50/R].append('%d\t%d\t%f\n' % (id,-1,v))
+				newline = '%d\t%f' % (id,v)
 				for x in c:
-					outlines[id*50/R].append('%d\t%d\t%f\n' % (id,x,v))
+					newline += '\t%d' % (x)
+				outlines[id*50/R].append(newline+'\n')
 		for g,l in zip(G,outlines):
 			g.writelines(l)
 		f.close()
@@ -104,26 +105,27 @@ if __name__ == "__main__":
 	r_id = 0
 	G = iter(open('%s%s.%s.ids.%d' % (tmpdir,sample_id,outpart,i)) for i in range(0,R,R/50))
 	g = G.next()
-	id,clust,val = np.fromstring(g.readline(),sep='\t')
+	id_vals = np.fromstring(g.readline(),sep='\t')
 	EOF = False
 	CF = {}
 	for a in hashobject.hash_read_generator(f):
-		while id < r_id:
+		while id_vals[0] < r_id:
 			try:
-				id,clust,val = np.fromstring(g.readline(),sep='\t')
+				id_vals = np.fromstring(g.readline(),sep='\t')
 			except:
 				try:
 					g = G.next()
-					id,clust,val = np.fromstring(g.readline(),sep='\t')
+					id_vals = np.fromstring(g.readline(),sep='\t')
 				except:
 					EOF = True
 		if EOF:
 			break
 		D = defaultdict(float)
-		while id == r_id:
-			D[clust] += val
+		while id_vals[0] == r_id:
+			for clust in id_vals[2:]:
+				D[clust] += id_vals[1]
 			try:
-				id,clust,val = np.fromstring(g.readline(),sep='\t')
+				id_vals = np.fromstring(g.readline(),sep='\t')
 			except:
 				break
 		best_clust = max_log_lik_ratio(D,cluster_probs)
