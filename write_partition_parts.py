@@ -122,6 +122,7 @@ if __name__ == "__main__":
 			break
 		D = defaultdict(float)
 		while id_vals[0] == r_id:
+			D[-1] += id_vals[1]
 			for clust in id_vals[2:]:
 				D[clust] += id_vals[1]
 			try:
