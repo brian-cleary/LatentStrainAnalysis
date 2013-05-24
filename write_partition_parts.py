@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+### THIS MAY OCCUPY ~10-50GB OF /tmp SPACE PER JOB
+
 import glob,os
 import sys,getopt
 import gzip
@@ -70,10 +72,12 @@ if __name__ == "__main__":
 	# If sharing ClusterFile among many jobs is not practical, we may aggregate jobs below by 1/50 ClusterFile fractions across samples (so each job reads 1 fraction)
 	for i in range(0,2**hashobject.hash_size,2**hashobject.hash_size/50):
 		os.system('sort -nk 1 %s%s.%s.cols.%d -o %s%s.%s.cols.%d' % (tmpdir,sample_id,outpart,i,tmpdir,sample_id,outpart,i))
-		C = np.fromfile(ClusterFile,dtype=np.int16,count=5*min(2**hashobject.hash_size/50,2**hashobject.hash_size-i))
-		V = np.fromfile(ValueFile,dtype=np.float32,count=min(2**hashobject.hash_size/50,2**hashobject.hash_size-i))
 		f = open('%s%s.%s.cols.%d' % (tmpdir,sample_id,outpart,i))
 		ColId = np.fromfile(f,dtype=np.int64,sep='\t')
+		f.close()
+		os.system('rm %s%s.%s.cols.%d' % (tmpdir,sample_id,outpart,i))
+		C = np.fromfile(ClusterFile,dtype=np.int16,count=5*min(2**hashobject.hash_size/50,2**hashobject.hash_size-i))
+		V = np.fromfile(ValueFile,dtype=np.float32,count=min(2**hashobject.hash_size/50,2**hashobject.hash_size-i))
 		c0 = None
 		outlines = [[] for _ in G]
 		for j in range(0,len(ColId),2):
@@ -91,10 +95,8 @@ if __name__ == "__main__":
 				outlines[id*50/R].append(newline+'\n')
 		for g,l in zip(G,outlines):
 			g.writelines(l)
-		f.close()
 		del C
 		del V
-		os.system('rm %s%s.%s.cols.%d' % (tmpdir,sample_id,outpart,i))
 	ClusterFile.close()
 	ValueFile.close()
 	for g in G:
@@ -110,9 +112,8 @@ if __name__ == "__main__":
 	CF = {}
 	for a in hashobject.hash_read_generator(f):
 		while id_vals[0] < r_id:
-			try:
-				id_vals = np.fromstring(g.readline(),sep='\t')
-			except:
+			id_vals = np.fromstring(g.readline(),sep='\t')
+			if id_vals[0] == -1:
 				try:
 					g = G.next()
 					id_vals = np.fromstring(g.readline(),sep='\t')
