@@ -27,7 +27,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 	# A VERY HACKED METHOD FOR DETERMINING READ PAIR ID NAMEOLOGY (ie readid/1,readid/2 vs readid 1,readid 2)
 	def id_type(self,f):
 		initial_pos = f.tell()
-		L = [f.readline() for _ in range(15)]
+		L = [f.readline() for _ in range(500)]
 		Ids = [l.strip().split() for l in L if l[0]=='@']
 		pair_type = None
 		for i in range(len(Ids)-1):

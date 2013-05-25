@@ -24,7 +24,8 @@ if __name__ == "__main__":
 				inputdir += '/'
 	os.system('mkdir '+inputdir+'Logs')
 	os.system('mkdir '+inputdir+'hashed_reads')
-	os.system('python create_hash.py -i '+inputdir+'original_reads/ -o '+inputdir+'hashed_reads/ -k '+k+' -s '+s)
+	os.system('python create_jobs.py -j CreateHash -i '+inputdir)
+	os.system('bsub < '+inputdir+'CreateHash_Job.q')
 	os.system('rm '+inputdir+'original_reads/random_kmers.fastq')
 	if len(glob.glob(os.path.join(inputdir+'hashed_reads','Wheels.txt'))) == 1:
 		os.system('python create_jobs.py -j HashReads -i '+inputdir)

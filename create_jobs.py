@@ -3,34 +3,40 @@
 import sys, getopt
 import glob, os
 
+# MergeHash can maybe go on the hour queue
+
 JobParams = {
+	'CreateHash': {
+		'outfile': """CreateHash_Job.q""",
+		'header': ["""#BSUB -J CreateHash""","""#BSUB -o PROJECT_HOME/Logs/CreateHash-Out.out""","""#BSUB -e PROJECT_HOME/Logs/CreateHash-Err.err""","""#BSUB -q hour"""],
+		'body': ["""python create_hash.py -i PROJECT_HOME/original_reads/ -o PROJECT_HOME/hashed_reads/ -k 33 -s 31"""]},
 	'HashReads': {
 		'outfile': """HashReads_ArrayJob.q""",
 		'array': ["""original_reads/""","""*.fastq.*"""],
-		'header': ["""#BSUB -J HashReads[1-""","""#BSUB -o PROJECT_HOME/Logs/HashReads-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/HashReads-Err-%I.err""","""#BSUB -q medium""","""#BSUB -M 5097152"""],
+		'header': ["""#BSUB -J HashReads[1-""","""#BSUB -o PROJECT_HOME/Logs/HashReads-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/HashReads-Err-%I.err""","""#BSUB -q week""","""#BSUB -M 5097152"""],
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python hash_fastq_reads.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/original_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'MergeHash': {
 		'outfile': """MergeHash_ArrayJob.q""",
 		'array': ["""original_reads/""","""*.fastq""",5],
-		'header': ["""#BSUB -J MergeHash[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeHash-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeHash-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=20192]'""","""#BSUB -M 22097152"""],
+		'header': ["""#BSUB -J MergeHash[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeHash-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeHash-Err-%I.err""","""#BSUB -q week""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=13192]'""","""#BSUB -M 20097152"""],
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_hashq_files.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'CombineFractions': {
 		'outfile': """CombineFractions_ArrayJob.q""",
 		'array': ["""original_reads/""","""*.fastq""",1],
-		'header': ["""#BSUB -J CombineFractions[1-""","""#BSUB -o PROJECT_HOME/Logs/CombineFractions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/CombineFractions-Err-%I.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=30192]'""","""#BSUB -M 52097152"""],
+		'header': ["""#BSUB -J CombineFractions[1-""","""#BSUB -o PROJECT_HOME/Logs/CombineFractions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/CombineFractions-Err-%I.err""","""#BSUB -q week""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=20192]'""","""#BSUB -M 40097152"""],
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python merge_hashq_fractions.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'GlobalWeights': {
 		'outfile': """GlobalWeights_Job.q""",
-		'header': ["""#BSUB -J GlobalWeights""","""#BSUB -o PROJECT_HOME/Logs/GlobalWeights-Out.out""","""#BSUB -e PROJECT_HOME/Logs/GlobalWeights-Err.err""","""#BSUB -q medium""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=84192]'""","""#BSUB -M 132097152"""],
+		'header': ["""#BSUB -J GlobalWeights""","""#BSUB -o PROJECT_HOME/Logs/GlobalWeights-Out.out""","""#BSUB -e PROJECT_HOME/Logs/GlobalWeights-Err.err""","""#BSUB -q week""","""#BSUB -W 71:10""","""#BSUB -R 'rusage[mem=54192]'""","""#BSUB -M 132097152"""],
 		'body': ["""python tfidf_corpus.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'KmerCorpus': {
 		'outfile': """KmerCorpus_ArrayJob.q""",
 		'array': ["""hashed_reads/""","""*.count.hash"""],
-		'header': ["""#BSUB -J KmerCorpus[1-""","""#BSUB -o PROJECT_HOME/Logs/KmerCorpus-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/KmerCorpus-Err-%I.err""","""#BSUB -q medium""","""#BSUB -R 'rusage[mem=70192]'""","""#BSUB -M 132097152"""],
+		'header': ["""#BSUB -J KmerCorpus[1-""","""#BSUB -o PROJECT_HOME/Logs/KmerCorpus-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/KmerCorpus-Err-%I.err""","""#BSUB -q week""","""#BSUB -R 'rusage[mem=50192]'""","""#BSUB -M 132097152"""],
 		'body': ["""sleep ${LSB_JOBINDEX}""","""python kmer_corpus.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'LSIKmerClusters': {
 		'outfile': """LSIKmerClusters_Job.q""",
-		'header': ["""#BSUB -J LSIKmerClusters""","""#BSUB -o PROJECT_HOME/Logs/LSIKmerClusters-Out.out""","""#BSUB -e PROJECT_HOME/Logs/LSIKmerClusters-Err.err""","""#BSUB -q long""","""#BSUB -R 'rusage[mem=82192]'""","""#BSUB -M 132097152""","""python -m Pyro4.naming -n 0.0.0.0 > PROJECT_HOME/Logs/nameserver.log 2>&1 &""","""P1=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker1.log 2>&1 &""","""P2=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker2.log 2>&1 &""","""P3=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker3.log 2>&1 &""","""P4=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker4.log 2>&1 &""","""P5=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker5.log 2>&1 &""","""P6=$!""","""python -m gensim.models.lsi_dispatcher > PROJECT_HOME/Logs/dispatcher.log 2>&1 &""","""P7=$!"""],
+		'header': ["""#BSUB -J LSIKmerClusters""","""#BSUB -o PROJECT_HOME/Logs/LSIKmerClusters-Out.out""","""#BSUB -e PROJECT_HOME/Logs/LSIKmerClusters-Err.err""","""#BSUB -q week""","""#BSUB -R 'rusage[mem=62192]'""","""#BSUB -M 132097152""","""source /broad/software/scripts/useuse""","""reuse Python-2.7""","""export PYTHONPATH=/home/unix/bcleary/src/lib/python2.7/site-packages:$PYTHONPATH""","""python -m Pyro4.naming -n 0.0.0.0 > PROJECT_HOME/Logs/nameserver.log 2>&1 &""","""P1=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker1.log 2>&1 &""","""P2=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker2.log 2>&1 &""","""P3=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker3.log 2>&1 &""","""P4=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker4.log 2>&1 &""","""P5=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker5.log 2>&1 &""","""P6=$!""","""python -m gensim.models.lsi_dispatcher > PROJECT_HOME/Logs/dispatcher.log 2>&1 &""","""P7=$!"""],
 		'body': ["""python kmer_lsi_clusters.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/""","""kill $P1 $P2 $P3 $P4 $P5 $P6 $P7"""]},
 	'ReadPartitions': {
 		'outfile': """ReadPartitions_ArrayJob.q""",
@@ -46,7 +52,7 @@ JobParams = {
 
 CommonElements = {
 	'header': ["""#!/bin/bash"""],
-	'body': ["""cd /import/analysis/comp_bio/metagenomics/latent_strain_analysis""","""echo Date: `date`""","""t1=`date +%s`"""],
+	'body': ["""source /broad/software/scripts/useuse""","""reuse Python-2.7""","""export PYTHONPATH=/home/unix/bcleary/src/lib/python2.7/site-packages:$PYTHONPATH""","""cd /home/unix/bcleary/projects/LatentStrainAnalysis""","""echo Date: `date`""","""t1=`date +%s`"""],
 	'footer': ["""[ $? -eq 0 ] || echo 'JOB FAILURE: $?'""","""echo Date: `date`""","""t2=`date +%s`""","""tdiff=`echo 'scale=3;('$t2'-'$t1')/3600' | bc`""","""echo 'Total time:  '$tdiff' hours'"""]
 }
 					

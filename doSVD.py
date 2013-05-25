@@ -21,7 +21,6 @@ if __name__ == "__main__":
 	os.system('mkdir %scluster_vectors' % (inputdir))
 	os.system('python create_jobs.py -j GlobalWeights -i %s' % (inputdir))
 	os.system('bsub < %sGlobalWeights_Job.q' % (inputdir))
-	os.system('sleep 10')
 	os.system('python create_jobs.py -j KmerCorpus -i %s' % (inputdir))
 	os.system('bsub -w "done(GlobalWeights)" < %sKmerCorpus_ArrayJob.q' % (inputdir))
 	os.system('python create_jobs.py -j LSIKmerClusters -i %s' % (inputdir))
