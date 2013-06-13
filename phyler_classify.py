@@ -3,21 +3,27 @@
 import sys, getopt
 import glob,os
 
+# sample the first 10**7 reads
 def get_fasta(fp,fo):
 	f = open(fp)
 	g = open(fo,'w')
 	lastlinechar = ''
 	writenext = False
+	read_count = 0
 	for line in f:
 		if (line[0] == '@') and (lastlinechar != '+'):
 			g.write('>'+line[1:])
 			writenext = True
+			read_count += 1
 		elif writenext:
 			g.write(line)
 			writenext = False
 		lastlinechar = line[0]
+		if read_count >= 10**7:
+			break
 	f.close()
 	g.close()
+	return read_count
 
 help_message = 'usage example: python read_phyler.py -r 1 -i /project/home/original_reads/ -o /project/home/phyler/'
 if __name__ == "__main__":
@@ -47,8 +53,9 @@ if __name__ == "__main__":
 	fileprefix = FP[fr]
 	fileprefix = fileprefix[fileprefix.rfind('/')+1:fileprefix.index('.fastq')]+fileprefix[-3:]
 	fasta_file = outputdir + fileprefix + '.fasta'
-	get_fasta(FP[fr],fasta_file)
-	os.system('blastall -p blastn -W15 -a1 -e0.01 -m8 -b1 -i %s -d /import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/markers/markers.dna > %s' % (fasta_file,outputdir+fileprefix+'.phyler.blastn'))
+	read_count = get_fasta(FP[fr],fasta_file)
+	os.system('touch '+outputdir + fileprefix + '.count.' + str(read_count))
+	os.system('blastall -p blastn -W15 -a1 -e0.01 -m8 -b1 -i %s -d /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.dna > %s' % (fasta_file,outputdir+fileprefix+'.phyler.blastn'))
 	os.system('rm '+fasta_file)
-	os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/metaphylerClassify /import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/markers/markers.blastn.classifier /import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/markers/markers.taxonomy %s > %s' % (outputdir+fileprefix+'.phyler.blastn',outputdir+fileprefix+'.phyler.blastn.classification'))
+	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/metaphylerClassify /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.blastn.classifier /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.taxonomy %s > %s' % (outputdir+fileprefix+'.phyler.blastn',outputdir+fileprefix+'.phyler.blastn.classification'))
 	os.system('rm '+outputdir+fileprefix+'.phyler.blastn')

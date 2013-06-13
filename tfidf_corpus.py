@@ -26,7 +26,7 @@ if __name__ == "__main__":
 			if outputdir[-1] != '/':
 				outputdir += '/'
 	hashobject = StreamingEigenhashes(inputdir,outputdir,get_pool=False)
-	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash'))
+	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.nonzero.npy'))
 	corpus_generator = hashobject.corpus_idf_from_hash_paths(Kmer_Hash_Count_Files)
 	hashobject.train_tfidf(corpus_generator)
 	np.save(hashobject.output_path+'global_weights.npy',hashobject.global_weights)

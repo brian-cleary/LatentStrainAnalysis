@@ -52,9 +52,9 @@ class Cluster_Analysis(LSA):
 				s[-1] += str(i)
 			s += c
 			i += 1
-		os.system('/import/analysis/comp_bio/metagenomics/src/velvet/velveth '+self.assembly_loc+' 29,61,10 -fastq -short '+' '.join(sg)+' '+' '.join(s))
+		os.system('/home/unix/bcleary/src/velvet/velveth '+self.assembly_loc+' 29,61,10 -fastq -short '+' '.join(sg)+' '+' '.join(s))
 		for i in range(29,61,10):
-			os.system('/import/analysis/comp_bio/metagenomics/src/velvet/velvetg '+self.assembly_loc+'_'+str(i)+'/ -exp_cov '+str(exp_cov)+' -cov_cutoff '+str(cov_cutoff)+' -min_contig_lgth '+str(min_contig))
+			os.system('/home/unix/bcleary/src/velvet/velvetg '+self.assembly_loc+'_'+str(i)+'/ -exp_cov '+str(exp_cov)+' -cov_cutoff '+str(cov_cutoff)+' -min_contig_lgth '+str(min_contig))
 
 	def assemble_cluster_idba(self,cluster_prefix,min_contig=500):
 		read_loc = self.input_path+cluster_prefix
@@ -67,7 +67,7 @@ class Cluster_Analysis(LSA):
 		os.system('/bli/bin/Linux/x86_64/ncbi-blast-2.2.27/ncbi-blast-2.2.27+/bin/blastn -query '+self.assembly_loc+'contigs.fa -db /import/pool2/projects/mega/search_dbs/prod/BLIS_SEQUENCES/blast/Viral_DNA_All_GenBank_Virus_Sequences -task megablast -outfmt "7 qseqid qstart qend sseqid score" -out '+self.output_path+cluster_prefix+'.viral.alignments.txt')
 
 	def phyler_assembly(self,cluster_prefix):
-		os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/runMetaphyler.pl '+self.assembly_loc+'contigs.fa blastn '+self.output_path+cluster_prefix+'.phyler.blastn 4')
+		os.system('/home/unix/bcleary/src/MetaPhylerV1.25/runMetaphyler.pl '+self.assembly_loc+'contigs.fa blastn '+self.output_path+cluster_prefix+'.phyler.blastn 4')
 
 	def assembly_stats(self,cluster_prefix,file_suffix='contigs.fa'):
 		AS = {}
@@ -123,37 +123,44 @@ class Cluster_Analysis(LSA):
 		type = self.id_type(f)
 		# this is kind of a bummer since files are *mostly* sorted already
 		if type == 1:
-			sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'][:d['_id'].index(' ')+2])
+			sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d[:d.index(' ')+2])
+			def get_id(r):
+				return r[:r.index(' ')+2]
 		elif type == 2:
-			sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split()[0])
+			sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d.split()[0])
+			def get_id(r):
+				return r.split()[0]
+		else:
+			sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d.split()[0])
+			def get_id(r):
+				return r.split()[0]+'*'
 		if len(sorted_reads) > 0:
-			pair_file = open(self.input_path+cluster_prefix+'.pairs.fastq','w')
+			pair_file1 = open(self.input_path+cluster_prefix+'.mate1.fastq','w')
+			pair_file2 = open(self.input_path+cluster_prefix+'.mate2.fastq','w')
 			singleton_file = open(self.input_path+cluster_prefix+'.singleton.fastq','w')
 			total_reads = 0
 			while len(sorted_reads) > 0:
 				current_id = None
 				last = ''
 				for r in sorted_reads:
-					if type == 1:
-						# use this for readid 1, readid 2 pairs
-						r_id = r['_id'][:r['_id'].index(' ')+2]
-					elif type == 2:
-						# use this for readid/1, readid/2 pairs
-						r_id = r['_id'].split()[0]
+					r_id = get_id(r)
 					if r_id[:-1] == current_id:
-						pair_file.write(last)
-						pair_file.write(r['_id'])
+						pair_file1.write(last)
+						pair_file2.write(r)
 						last = ''
 					else:
 						singleton_file.write(last)
-						last = r['_id']
+						last = r
 					current_id = r_id[:-1]
 				total_reads += len(sorted_reads)
 				if type == 1:
-					sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'][:d['_id'].index(' ')+2])
+					sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d[:d.index(' ')+2])
 				elif type == 2:
-					sorted_reads = sorted(self.read_generator(f,verbose_ids=True,max_reads=10**7),key=lambda (d): d['_id'].split()[0])
-			pair_file.close()
+					sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d.split()[0])
+				else:
+					sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d.split()[0])
+			pair_file1.close()
+			pair_file2.close()
 			singleton_file.close()
 			f.close()
 			os.system('rm '+self.input_path+cluster_prefix+'.fastq')
@@ -161,11 +168,15 @@ class Cluster_Analysis(LSA):
 			return total_reads
 		else:
 			f.close()
-			return sum(self.read_counts(cluster_prefix).values())
+			try:
+				r = sum(self.read_counts(cluster_prefix).values())
+			except:
+				r = 0
+			return r
 
 	def read_counts(self,cluster_prefix):
 		RC = {}
-		RC['paired'] = self.read_count(self.input_path+cluster_prefix+'.pairs.fastq',startchar='@')
+		RC['paired'] = self.read_count(self.input_path+cluster_prefix+'.mate1.fastq',startchar='@')*2
 		RC['singleton'] = self.read_count(self.input_path+cluster_prefix+'.singleton.fastq',startchar='@')
 		return RC
 

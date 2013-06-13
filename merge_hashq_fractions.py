@@ -2,6 +2,7 @@
 
 import sys, getopt
 import glob, os
+import numpy as np
 from fastq_reader import Fastq_Reader
 
 help_message = 'usage example: python merge_hashq_files.py -r 3 -i /project/home/hashed_reads/ -o /project/home/hashed_reads/'
@@ -31,10 +32,7 @@ if __name__ == "__main__":
 	file_prefix = FP[fr]
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	H = hashobject.merge_count_fractions(file_prefix)
-	count = 0
-	total = 0
-	for x in H:
-		if x > 0:
-			count += 1
-			total += x
-	print 'sample %s has %d nonzero elements and %d total observed kmers' % (file_prefix,count,total)
+	H = np.array(H,dtype=np.uint16)
+	nz = np.nonzero(H)[0]
+	np.save(hashobject.output_path+file_prefix+'.nonzero.npy',nz)
+	print 'sample %s has %d nonzero elements and %d total observed kmers' % (len(nz),H.sum())

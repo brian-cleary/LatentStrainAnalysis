@@ -28,7 +28,6 @@ if __name__ == "__main__":
 				outputdir += '/'
 	hashobject = StreamingEigenhashes(inputdir,outputdir,get_pool=False)
 	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash'))
-	hashobject.global_weights = np.load(hashobject.output_path+'global_weights.npy')
 	#M = np.load(hashobject.input_path+'column_mask.npy')
 	M = []
 	hashobject.kmer_corpus_to_disk(Kmer_Hash_Count_Files[fr],mask=M)

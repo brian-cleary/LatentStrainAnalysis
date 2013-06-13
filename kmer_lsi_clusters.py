@@ -7,10 +7,10 @@ import numpy as np
 from collections import defaultdict
 from streaming_eigenhashes import StreamingEigenhashes
 
-help_message = 'usage example: python kmer_clusters.py -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/'
+help_message = 'usage example: python kmer_clusters.py -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/ -p 16'
 if __name__ == "__main__":
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],'hi:o:',["inputdir=","outputdir="])
+		opts, args = getopt.getopt(sys.argv[1:],'hi:o:p:',["inputdir=","outputdir=","numproc"])
 	except:
 		print help_message
 		sys.exit(2)
@@ -26,7 +26,9 @@ if __name__ == "__main__":
 			outputdir = arg
 			if outputdir[-1] != '/':
 				outputdir += '/'
-	hashobject = StreamingEigenhashes(inputdir,outputdir)
+		elif opt in ('-p','--numproc'):
+			num_proc = int(arg)
+	hashobject = StreamingEigenhashes(inputdir,outputdir,get_pool=num_proc)
 	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash.conditioned'))
 	hashobject.path_dict = {}
 	for i in range(len(Kmer_Hash_Count_Files)):
@@ -50,19 +52,10 @@ if __name__ == "__main__":
 	del Y
 	del GW
 	X = np.memmap(hashobject.output_path+'cluster_cols.npy',dtype=np.int16,mode='w+',shape=(2**hashobject.hash_size,5))
-	I = dict([(k+1,iter(v)) for k,v in enumerate(C)])
-	Ix = defaultdict(list)
-	for k,v in I.items():
-		Ix[v.next()].append(k)
-	# should maybe flush at some point
-	while len(Ix)>0:
-		minx = min(Ix.keys())
-		X[minx,:len(Ix[minx])] = Ix[minx]
-		for k in Ix[minx]:
-			try:
-				Ix[I[k].next()].append(k)
-			except:
-				pass
-		del Ix[minx]
+	Ix = np.zeros(2**hashobject.hash_size,dtype=np.int8)
+	for i,c in enumerate(C):
+		for x in c:
+			X[x,Ix[x]] = i+1
+			Ix[x] += 1
 	del X
 	

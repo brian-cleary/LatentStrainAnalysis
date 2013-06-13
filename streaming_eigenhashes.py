@@ -11,23 +11,19 @@ from hash_counting import Hash_Counting
 
 class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 
-	def __init__(self,inpath,outpath,get_pool=True):
+	def __init__(self,inpath,outpath,get_pool=8):
 		super(StreamingEigenhashes,self).__init__(inpath,outpath)
 		self.get_wheels(wheel_limit=1)
 		self.hash_size = self.Wheels[-1]['s'] + 1
 		self.kmer_size = len(self.Wheels[0]['p'])
-		if get_pool:
-			self.pool = Pool()
+		if get_pool > 0:
+			self.pool = Pool(get_pool)
 
-	def corpus_idf_from_hash_paths(self,path_list,apply_weights=False):
+	def corpus_idf_from_hash_paths(self,path_list):
 		class NewCorpus(object):
 			def __iter__(newself):
-				row = 0
 				for fp in path_list:
-					row += 1
-					H = np.array(self.open_count_hash(fp),dtype=np.uint16)
-					nonzeros = np.nonzero(H)[0]
-					print 'yielding '+str(len(nonzeros))+' elements for row '+str(row)
+					nonzeros = np.load(fp)
 					yield nonzeros
 		return NewCorpus()
 
@@ -45,6 +41,7 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		del mask
 		norm = np.linalg.norm(H)/len(H)**.5
 		X = np.memmap(fp+'.conditioned',dtype=np.float32,mode='w+',shape=(len(H),))
+		self.global_weights = np.load(self.output_path+'global_weights.npy')
 		X[:] = H*self.global_weights/norm
 		del X
 
@@ -79,7 +76,7 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 		return models.LsiModel(kmer_corpus,num_topics=num_dims,id2word=self.path_dict,distributed=True,chunksize=200000)
 
-	def lsi_kmer_clusters(self,lsi,random_chunk=0.0002,cluster_thresh=0.85,cluster_iters=100):
+	def lsi_kmer_clusters(self,lsi,random_chunk=0.00002,cluster_thresh=0.75,cluster_iters=200):
 		Clusters = {}
 		Index = np.zeros((0,lsi.num_topics))
 		chunk_size = random_chunk*2**self.hash_size
@@ -102,7 +99,7 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		self.pool.join()
 		return [Clusters[i][:Sizes[i]] for i in range(len(Clusters))]
 
-	def merge_index(self,V,I,C,thresh=0.85):
+	def merge_index(self,V,I,C,thresh=0.75):
 		MergeFits = defaultdict(list)
 		for doc in V:
 			if len(doc) > 0:
@@ -125,7 +122,7 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			C[k] += len(v)
 		return C,I
 
-	def collapse_index(self,I,C,combine_thresh=0.85):
+	def collapse_index(self,I,C,combine_thresh=0.75):
 		remove_clusters = {}
 		D = distance.pdist(I,'cosine')
 		D = D < (1 - combine_thresh)

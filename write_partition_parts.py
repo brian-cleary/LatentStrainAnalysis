@@ -54,7 +54,8 @@ if __name__ == "__main__":
 	infile = Hashq_Files[fr]
 	outpart = infile[-5:-3]
 	sample_id = infile[infile.rfind('/')+1:infile.index('.hashq')]
-	tmpdir = '/tmp/'
+	tmpdir = '/broad/hptmp/bcleary/%d/' % (fr)
+	os.system('mkdir '+tmpdir)
 	G = [open('%s%s.%s.cols.%d' % (tmpdir,sample_id,outpart,i),'w') for i in range(0,2**hashobject.hash_size,2**hashobject.hash_size/50)]
 	f = gzip.open(infile)
 	r_id = 0
@@ -138,6 +139,5 @@ if __name__ == "__main__":
 		r_id += 1
 	for f in CF.values():
 		f.close()
-	for i in range(0,R,R/50):
-		os.system('rm %s%s.%s.ids.%d' % (tmpdir,sample_id,outpart,i))
+	os.system('rm -r '+tmpdir)
 		

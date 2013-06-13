@@ -28,6 +28,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 	def id_type(self,f):
 		initial_pos = f.tell()
 		L = [f.readline() for _ in range(500)]
+		L = [l for l in L if l]
 		Ids = [l.strip().split() for l in L if l[0]=='@']
 		pair_type = None
 		for i in range(len(Ids)-1):
@@ -64,7 +65,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 			lastlinechar = line[0]
 			line = file_object.readline().strip()
 
-	def read_generator(self,file_object,max_reads=10**15,verbose_ids=False):
+	def read_generator(self,file_object,max_reads=10**15,verbose_ids=False,raw_reads=False):
 		self.set_quality_codes()
 		line = 'dummyline'
 		r = 0
@@ -75,9 +76,6 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 					try:
 						# ASSUMING READ PAIRS ARE SPLIT INTO THEIR OWN LINES
 						verbose_id = line
-						#I = line.split()[1]
-						#I = I[I.index(':')+1:]
-						#I = line[line.index(':')+1:].strip()
 						I = line.strip()
 						line = file_object.readline()
 						verbose_id += line
@@ -88,17 +86,20 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 						verbose_id += file_object.readline()
 						line = file_object.readline()
 						verbose_id += line
-						if verbose_ids:
-							I = verbose_id
-						Q = [self.quality_codes[c] for c in line.strip()]
-						if (S) and (Q):
-							low_qual = 0
-							i = -1
-							while (i < len(S)-self.kmer_size) and (low_qual < 3):
-								if Q[i+self.kmer_size] < 3:
-									low_qual += 1
-								i += 1
-							yield {'_id': I,'s': S[:i+self.kmer_size],'q': Q[:i+self.kmer_size]}
+						if raw_reads:
+							yield verbose_id
+						else:
+							if verbose_ids:
+								I = verbose_id
+							Q = [self.quality_codes[c] for c in line.strip()]
+							if (S) and (Q):
+								low_qual = 0
+								i = -1
+								while (i < len(S)-self.kmer_size) and (low_qual < 3):
+									if Q[i+self.kmer_size] < 3:
+										low_qual += 1
+									i += 1
+								yield {'_id': I,'s': S[:i+self.kmer_size],'q': Q[:i+self.kmer_size]}
 						r += 1
 					except Exception,err:
 						#print 'warning: fastq read_generator error',str(err)

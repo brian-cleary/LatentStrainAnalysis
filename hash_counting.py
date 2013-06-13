@@ -51,9 +51,10 @@ class Hash_Counting(LSA):
 				if x > 0:
 					H[i] = min(65535,H[i]+x)
 			del H1
-		f = open(self.output_path+fileprefix+'.count.hash','wb')
-		f.write(H)
-		f.close()
+		if len(FP) > 0:
+			f = open(self.output_path+fileprefix+'.count.hash','wb')
+			f.write(H)
+			f.close()
 		for fp in FP:
 			os.system('rm '+fp)
 		return H

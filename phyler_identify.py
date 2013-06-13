@@ -31,6 +31,20 @@ if __name__ == "__main__":
 	FP = list(set([fp[:fp.index('.')] for fp in FP]))
 	fileprefix = FP[fr]
 	FP = glob.glob(os.path.join(outputdir,fileprefix+'.*.classification'))
-	os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/combine %s > %s' % (' '.join(FP),outputdir+fileprefix+'.blastn.classification'))
+	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/combine %s > %s' % (' '.join(FP),outputdir+fileprefix+'.blastn.classification'))
 	os.system('rm '+' '.join(FP))
-	os.system('/import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/taxprof 0.9 %s %s /import/analysis/comp_bio/metagenomics/src/MetaPhylerV1.25/markers/tid2name.tab' % (outputdir+fileprefix+'.blastn.classification',outputdir+fileprefix+'.blastn'))
+	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/taxprof 0.9 %s %s /home/unix/bcleary/src/MetaPhylerV1.25/markers/tid2name.tab' % (outputdir+fileprefix+'.blastn.classification',outputdir+fileprefix+'.blastn'))
+	FP = glob.glob(os.path.join(outputdir,fileprefix+'.*.count.*'))
+	total = sum([int(fp[fp.rfind('.')+1:]) for fp in FP])
+	correction_factor = 100.
+	FP = glob.glob(os.path.join(outputdir,'*.taxprof'))
+	for fp in FP:
+		f = open(fp)
+		g = open(fp+'.norm','w')
+		g.write(f.readline())
+		for line in f:
+			ls = line.strip().split('\t')
+			g.write('%s\t%s\t%f\n' % (ls[0],ls[1],int(ls[2])*correction_factor/total))
+		f.close()
+		g.close()
+	os.system('rm '+outputdir+fileprefix+'.*.count.*')

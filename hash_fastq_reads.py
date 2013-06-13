@@ -7,16 +7,23 @@ from fastq_reader import Fastq_Reader
 
 # PAIRED READ FILES ARE ASSUMED TO BE SORTED
 def kmer_bins(b,A,pfx,outfile,type):
+	if type == 1:
+		# use this for readid 1, readid 2 pairs
+		def get_id(a):
+			return a[:a.index(' ')+2]
+	elif type == 2:
+		# use this for readid/1, readid/2 pairs
+		def get_id(a):
+			return a.split()[0]
+	else:
+		# no known read type treated as singleton
+		def get_id(a):
+			return a.split()[0]+'*'
 	current_id = None
 	pair = []
 	bins = []
 	for a in range(len(A)):
-		if type == 1:
-			# use this for readid 1, readid 2 pairs
-			read_id = A[a][:A[a].index(' ')+2]
-		elif type == 2:
-			# use this for readid/1, readid/2 pairs
-			read_id = A[a].split()[0]
+		read_id = get_id(A[a])
 		if read_id != current_id:
 			if (len(bins) > 0) and (read_id[:-1] != current_id[:-1]):
 				for rp in pair:
