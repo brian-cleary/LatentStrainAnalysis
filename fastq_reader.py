@@ -66,7 +66,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 			line = file_object.readline().strip()
 
 	def read_generator(self,file_object,max_reads=10**15,verbose_ids=False,raw_reads=False):
-		self.set_quality_codes()
+		self.set_quality_codes(file_object)
 		line = 'dummyline'
 		r = 0
 		while (line != '') and (r < max_reads):
@@ -105,8 +105,26 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 						#print 'warning: fastq read_generator error',str(err)
 						pass
 
-	def set_quality_codes(self):
-		self.quality_codes = {'$': 3, '(': 7, ',': 11, '0': 15, '4': 19, '8': 23, '<': 27, '@': 31, 'D': 35, 'H': 39, 'L': 43, 'P': 47, 'T': 51, 'X': 55, '\\': 59, '`': 63, 'd': 67, 'h': 71, 'l': 75, 'p': 79, 't': 83, 'x': 87, '|': 91, '#': 2, "'": 6, '+': 10, '/': 14, '3': 18, '7': 22, ';': 26, '?': 30, 'C': 34, 'G': 38, 'K': 42, 'O': 46, 'S': 50, 'W': 54, '[': 58, '_': 62, 'c': 66, 'g': 70, 'k': 74, 'o': 78, 's': 82, 'w': 86, '{': 90, '"': 1, '&': 5, '*': 9, '.': 13, '2': 17, '6': 21, ':': 25, '>': 29, 'B': 33, 'F': 37, 'J': 41, 'N': 45, 'R': 49, 'V': 53, 'Z': 57, '^': 61, 'b': 65, 'f': 69, 'j': 73, 'n': 77, 'r': 81, 'v': 85, 'z': 89, '~': 93, '!': 0, '%': 4, ')': 8, '-': 12, '1': 16, '5': 20, '9': 24, '=': 28, 'A': 32, 'E': 36, 'I': 40, 'M': 44, 'Q': 48, 'U': 52, 'Y': 56, ']': 60, 'a': 64, 'e': 68, 'i': 72, 'm': 76, 'q': 80, 'u': 84, 'y': 88, '}': 92}
+	def set_quality_codes(self,f):
+		last = f.tell()
+		L = [f.readline() for _ in range(4000)]
+		f.seek(last)
+		L = [l for l in L if l]
+		x = [sum([1 for l in L[i::4] if l[0]=='+']) for i in range(4)]
+		x = x.index(max(x))+1
+		o33 = 0
+		o64 = 0
+		for l in L[x::4]:
+			for c in l.strip():
+				oc = ord(c)
+				if oc < 64:
+					o33 += 1
+				else:
+					o64 += 1
+		if 3*o33 > o64:
+			self.quality_codes = dict([(chr(x),x-33) for x in range(33,33+94)])
+		else:
+			self.quality_codes = dict([(chr(x),x-64) for x in range(64-5,64+63)])
 
 	def rand_kmers_for_wheel(self,total_kmers):
 		RP = glob.glob(os.path.join(self.input_path,'*.fastq.*'))
