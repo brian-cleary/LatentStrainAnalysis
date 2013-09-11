@@ -24,20 +24,13 @@ if __name__ == "__main__":
 			outputdir = arg
 			if outputdir[-1] != '/':
 				outputdir += '/'
-	FP = glob.glob(os.path.join(inputdir,'*.fastq.*'))
-	# run on just a portion of the files
-	FP = [fp for fp in FP if fp[-2:] in ('ac','ae')]
-	FP = [fp[fp.rfind('/')+1:] for fp in FP]
-	FP = list(set([fp[:fp.index('.')] for fp in FP]))
-	fileprefix = FP[fr]
-	FP = glob.glob(os.path.join(outputdir,fileprefix+'.*.classification'))
-	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/combine %s > %s' % (' '.join(FP),outputdir+fileprefix+'.blastn.classification'))
-	os.system('rm '+' '.join(FP))
-	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/taxprof 0.9 %s %s /home/unix/bcleary/src/MetaPhylerV1.25/markers/tid2name.tab' % (outputdir+fileprefix+'.blastn.classification',outputdir+fileprefix+'.blastn'))
-	FP = glob.glob(os.path.join(outputdir,fileprefix+'.*.count.*'))
+	fr = str(fr) + '/'
+	### this can be done in phyler_classify
+	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/taxprof 0.9 %s %s /home/unix/bcleary/src/MetaPhylerV1.25/markers/tid2name.tab' % (outputdir+fr+'all.phyler.blastn.classification',outputdir+fr+'all.blastn'))
+	FP = glob.glob(os.path.join(outputdir+fr,'*.count.*'))
 	total = sum([int(fp[fp.rfind('.')+1:]) for fp in FP])
 	correction_factor = 100.
-	FP = glob.glob(os.path.join(outputdir,'*.taxprof'))
+	FP = glob.glob(os.path.join(outputdir+fr,'*.taxprof'))
 	for fp in FP:
 		f = open(fp)
 		g = open(fp+'.norm','w')
@@ -47,4 +40,3 @@ if __name__ == "__main__":
 			g.write('%s\t%s\t%f\n' % (ls[0],ls[1],int(ls[2])*correction_factor/total))
 		f.close()
 		g.close()
-	os.system('rm '+outputdir+fileprefix+'.*.count.*')

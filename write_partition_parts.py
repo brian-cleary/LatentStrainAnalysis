@@ -52,7 +52,7 @@ if __name__ == "__main__":
 	Hashq_Files = [fp for fp in Hashq_Files if '.tmp' not in fp]
 	Hashq_Files.sort()
 	infile = Hashq_Files[fr]
-	outpart = infile[-5:-3]
+	outpart = infile[-6:-3]
 	sample_id = infile[infile.rfind('/')+1:infile.index('.hashq')]
 	tmpdir = '/broad/hptmp/bcleary/%d/' % (fr)
 	os.system('mkdir '+tmpdir)
@@ -134,10 +134,18 @@ if __name__ == "__main__":
 		best_clust = max_log_lik_ratio(D,cluster_probs)
 		if best_clust != None:
 			if best_clust not in CF:
-				CF[best_clust] = open('%s%d.%s.fastq.%s' % (hashobject.output_path,best_clust,sample_id,outpart),'w')
+				try:
+					CF[best_clust] = open('%s%d/%s.fastq.%s' % (hashobject.output_path,best_clust,sample_id,outpart),'a')
+				except:
+					os.system('mkdir %s%d/' % (hashobject.output_path,best_clust))
+					CF[best_clust] = open('%s%d/%s.fastq.%s' % (hashobject.output_path,best_clust,sample_id,outpart),'a')
 			CF[best_clust].write(a[0]+'\n')
+		if len(CF) > 200:
+			for cfv in CF.values():
+				cfv.close()
+			CF = {}
 		r_id += 1
 	for f in CF.values():
 		f.close()
-	os.system('rm -r '+tmpdir)
+	os.system('rm -rf '+tmpdir)
 		

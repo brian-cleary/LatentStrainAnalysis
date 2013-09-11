@@ -32,7 +32,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 		Ids = [l.strip().split() for l in L if l[0]=='@']
 		pair_type = None
 		for i in range(len(Ids)-1):
-			if (Ids[i][0] == Ids[i+1][0]):
+			if (Ids[i][0] == Ids[i+1][0]) and (len(Ids[i] > 1) and (len(Ids[i+1] > 1):
 				if (Ids[i][1][0] == '1') and (Ids[i+1][1][0] == '2') and (Ids[i][1][1:] == Ids[i+1][1][1:]):
 					pair_type = 1
 					break
@@ -128,27 +128,39 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 
 	def rand_kmers_for_wheel(self,total_kmers):
 		RP = glob.glob(os.path.join(self.input_path,'*.fastq.*'))
+		if len(RP) > 100:
+			import random
+			RP = random.sample(RP,100)
 		kmers_per_file = max(total_kmers/len(RP),5)
 		g = open(self.input_path+'random_kmers.fastq','w')
 		for rp in RP:
 			f = open(rp)
 			kf = 0
+			fails = 0
 			while kf < kmers_per_file:
 				try:
 					g.write(self.rand_kmer(f))
 					kf += 1
 				except Exception,err:
+					fails += 1
 					print str(err)
+					if fails > 100:
+						break
 			f.close()
 		g.close()
 
 	def rand_kmer(self,f,max_seek=10**8):
 		while True:
 			f.seek(randint(0,max_seek))
+			# ultra slow - partly due to setting qual scores every time
 			rs = [_ for _ in self.read_generator(f,max_reads=1,verbose_ids=True)]
 			if len(rs) > 0:
 				if len(rs[0]['s']) > self.kmer_size:
 					break
+			else:
+				max_seek /= 10
+			if max_seek == 0:
+				raise Exception
 		ri = min(20,randint(0,len(rs[0]['s'])-self.kmer_size))
 		rs = rs[0]['_id'].split('\n')
 		return '\n'.join([rs[0],rs[1][ri:ri+self.kmer_size],rs[2],rs[3][ri:ri+self.kmer_size]+'\n']) 

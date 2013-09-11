@@ -76,7 +76,7 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 		return models.LsiModel(kmer_corpus,num_topics=num_dims,id2word=self.path_dict,distributed=True,chunksize=200000)
 
-	def lsi_kmer_clusters(self,lsi,random_chunk=0.00002,cluster_thresh=0.75,cluster_iters=200):
+	def lsi_cluster_index(self,lsi,random_chunk=0.00002,cluster_iters=200):
 		Clusters = {}
 		Index = np.zeros((0,lsi.num_topics))
 		chunk_size = random_chunk*2**self.hash_size
@@ -85,16 +85,60 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			Clusters,Index = self.merge_index(seed_vectors,Index,Clusters)
 			Clusters,Index = self.collapse_index(Index,Clusters)
 			print ci,len(Clusters)
-		Clusters = [np.empty((2**self.hash_size,),dtype=np.int64) for _ in range(Index.shape[0])]
+		return Index
+
+	def lsi_cluster_part(self,offsets,lsi,Index,cluster_thresh=0.75):
+		Clusters = [np.empty((offsets[1],),dtype=np.int64) for _ in range(Index.shape[0])]
 		Sizes = np.zeros(Index.shape[0],dtype=np.int64)
-		for j in range(0,2**self.hash_size,10**7):
-			block = [((i,10**5),lsi,Index,cluster_thresh,self.input_path,self.output_path,self.path_dict) for i in range(j,min(j+10**7,2**self.hash_size),10**5)]
-			results = self.pool.map(distance_pool,block)
-			for r in results:
-				for i in range(len(Clusters)):
-					for x in enumerate(r[i]):
-						Clusters[i][Sizes[i]+x[0]] = x[1]
-					Sizes[i] += len(r[i])
+		num_best = 5
+		all_vectors = lsi[self.kmer_corpus_from_disk(o=offsets)]
+		vector_block = []
+		block_index = []
+		for col,doc in enumerate(all_vectors):
+			# this is slow and not particularly clever...
+			if len(doc) > 0:
+				block_index.append(col+offsets[0])
+				a = np.zeros(Index.shape[1])
+				for x in doc:
+					a[x[0]] = x[1]
+				vector_block.append(a)
+			if len(vector_block) == 10**4:
+				D = distance.cdist(vector_block,Index,'cosine')
+				for indexed_doc in enumerate(D):
+					colx,fits = indexed_doc
+					MI = fits.argsort()[:num_best]
+					for clust in MI:
+						if fits[clust] < 1-cluster_thresh:
+							Clusters[clust][Sizes[clust]] = block_index[colx]
+							Sizes[clust] += 1
+						else:
+							break
+				block_index = []
+				vector_block = []
+		if len(vector_block) > 0:
+			D = distance.cdist(vector_block,Index,'cosine')
+			for indexed_doc in enumerate(D):
+				colx,fits = indexed_doc
+				MI = fits.argsort()[:num_best]
+				for clust in MI:
+					if fits[clust] < 1-cluster_thresh:
+						Clusters[clust][Sizes[clust]] = block_index[colx]
+						Sizes[clust] += 1
+					else:
+						break
+		return [c[:Sizes[i]] for i,c in enumerate(Clusters)]
+
+	def lsi_kmer_clusters(self,lsi,Index,c0,cs=10**5,cluster_thresh=0.75):
+		Clusters = [np.empty((cs,),dtype=np.int64) for _ in range(Index.shape[0])]
+		Sizes = np.zeros(Index.shape[0],dtype=np.int64)
+		#for j in range(0,2**self.hash_size,10**7):
+		block = [((i,10**5),lsi,Index,cluster_thresh,self.input_path,self.output_path,self.path_dict) for i in range(j,min(j+10**7,2**self.hash_size),10**5)]
+		results = self.pool.map(distance_pool,block)
+		for r in results:
+			for i in range(len(Clusters)):
+				for x in enumerate(r[i]):
+					Clusters[i][Sizes[i]+x[0]] = x[1]
+				Sizes[i] += len(r[i])
 		self.pool.close()
 		self.pool.join()
 		return [Clusters[i][:Sizes[i]] for i in range(len(Clusters))]
@@ -143,40 +187,3 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			if i not in remove_clusters:
 				Cnew[len(Cnew)] = C[i]
 		return Cnew,I[[i for i in range(len(C)) if i not in remove_clusters],:]
-
-def distance_pool(args):
-	offsets,lsi,Index,cluster_thresh,indir,outdir,path_dict = args
-	hashobject = StreamingEigenhashes(indir,outdir,get_pool=False)
-	hashobject.path_dict = path_dict
-	Clusters = [[] for _ in range(Index.shape[0])]
-	num_best = 5
-	all_vectors = lsi[hashobject.kmer_corpus_from_disk(o=offsets)]
-	vector_block = []
-	block_index = []
-	for col,doc in enumerate(all_vectors):
-		# this is slow and not particularly clever...
-		if len(doc) > 0:
-			block_index.append(col+offsets[0])
-			a = np.zeros(Index.shape[1])
-			for x in doc:
-				a[x[0]] = x[1]
-			vector_block.append(a)
-		if len(vector_block) == 10**4:
-			D = distance.cdist(vector_block,Index,'cosine')
-			for indexed_doc in enumerate(D):
-				colx,fits = indexed_doc
-				MI = fits.argsort()[:num_best]
-				for clust in MI:
-					if fits[clust] < 1-cluster_thresh:
-						Clusters[clust].append(block_index[colx])
-			block_index = []
-			vector_block = []
-	if len(vector_block) > 0:
-		D = distance.cdist(vector_block,Index,'cosine')
-		for indexed_doc in enumerate(D):
-			colx,fits = indexed_doc
-			MI = fits.argsort()[:num_best]
-			for clust in MI:
-				if fits[clust] < 1-cluster_thresh:
-					Clusters[clust].append(block_index[colx])
-	return Clusters

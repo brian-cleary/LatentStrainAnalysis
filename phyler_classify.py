@@ -46,16 +46,18 @@ if __name__ == "__main__":
 			outputdir = arg
 			if outputdir[-1] != '/':
 				outputdir += '/'
-	FP = glob.glob(os.path.join(inputdir,'*.fastq.*'))
-	# run on just a portion of the files
-	FP = [fp for fp in FP if fp[-2:] in ('ac','ae')]
-	FP.sort()
-	fileprefix = FP[fr]
-	fileprefix = fileprefix[fileprefix.rfind('/')+1:fileprefix.index('.fastq')]+fileprefix[-3:]
-	fasta_file = outputdir + fileprefix + '.fasta'
-	read_count = get_fasta(FP[fr],fasta_file)
-	os.system('touch '+outputdir + fileprefix + '.count.' + str(read_count))
-	os.system('blastall -p blastn -W15 -a1 -e0.01 -m8 -b1 -i %s -d /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.dna > %s' % (fasta_file,outputdir+fileprefix+'.phyler.blastn'))
-	os.system('rm '+fasta_file)
-	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/metaphylerClassify /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.blastn.classifier /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.taxonomy %s > %s' % (outputdir+fileprefix+'.phyler.blastn',outputdir+fileprefix+'.phyler.blastn.classification'))
-	os.system('rm '+outputdir+fileprefix+'.phyler.blastn')
+	fr = str(fr) + '/'
+	os.system('mkdir '+outputdir+fr)
+	FP = glob.glob(os.path.join(inputdir+fr,'*.fastq'))
+	read_count = 0
+	for fp in FP:
+		fileprefix = fp[fp.rfind('/')+1:fp.index('.fastq')]
+		fasta_file = outputdir + fr + fileprefix + '.fasta'
+		read_count += get_fasta(fp,fasta_file)
+	os.system('cat %s*.fasta > %sall.fa' % (outputdir+fr,outputdir+fr))
+	os.system('rm '+outputdir+fr+'*.fasta')
+	os.system('touch '+outputdir + fr + 'all.count.' + str(read_count))
+	os.system('blastall -p blastn -W15 -a1 -e0.01 -m8 -b1 -i %s -d /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.dna > %s' % (outputdir+fr+'all.fa',outputdir+fr+'all.phyler.blastn'))
+	os.system('rm '+outputdir+fr+'all.fa')
+	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/metaphylerClassify /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.blastn.classifier /home/unix/bcleary/src/MetaPhylerV1.25/markers/markers.taxonomy %s > %s' % (outputdir+fr+'all.phyler.blastn',outputdir+fr+'all.phyler.blastn.classification'))
+	os.system('rm '+outputdir+fr+'all.phyler.blastn')

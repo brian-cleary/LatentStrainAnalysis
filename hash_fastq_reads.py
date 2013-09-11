@@ -58,7 +58,7 @@ if __name__ == "__main__":
 				outputdir += '/'
 	FP = glob.glob(os.path.join(inputdir,'*.fastq.*'))
 	file_prefix = FP[fr]
-	file_split = file_prefix[-3:]
+	file_split = file_prefix[-4:]
 	file_prefix = file_prefix[file_prefix.rfind('/')+1:file_prefix.index('.fastq')]
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	f = open(hashobject.input_path+file_prefix+'.fastq'+file_split,'r')

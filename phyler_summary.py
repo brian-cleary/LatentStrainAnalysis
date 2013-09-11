@@ -5,14 +5,14 @@ import glob,os
 from collections import defaultdict
 from operator import itemgetter
 
-def tax_level_summary(FP,inverted=False):
+def tax_level_summary(FP,inverted=True):
 	Classifications = defaultdict(float)
 	Samples = {}
 	Totals = defaultdict(float)
 	for fp in FP:
 		L = open(fp).readlines()
-		n = fp[fp.rfind('/')+1:]
-		n = n[:n.index('.')]
+		n = fp[:fp.rfind('/')]
+		n = n[n.rfind('/')+1:]
 		Samples[n] = defaultdict(float)
 		for l in L[1:]:
 			ls = l.strip().split('\t')
@@ -50,15 +50,15 @@ if __name__ == "__main__":
 			inputdir = arg
 			if inputdir[-1] != '/':
 				inputdir += '/'
-	FP = glob.glob(os.path.join(inputdir,'*.genus.taxprof.norm'))
+	FP = glob.glob(inputdir+'*/all.blastn.genus.taxprof.norm')
 	f = open(inputdir+'sub-sample_genus_abundance.txt','w')
 	f.writelines(tax_level_summary(FP))
 	f.close()
-	FP = glob.glob(os.path.join(inputdir,'*.family.taxprof.norm'))
+	FP = glob.glob(inputdir+'*/all.blastn.family.taxprof.norm')
 	f = open(inputdir+'sub-sample_family_abundance.txt','w')
 	f.writelines(tax_level_summary(FP))
 	f.close()
-	FP = glob.glob(os.path.join(inputdir,'*.order.taxprof.norm'))
+	FP = glob.glob(inputdir+'*/all.blastn.order.taxprof.norm')
 	f = open(inputdir+'sub-sample_order_abundance.txt','w')
 	f.writelines(tax_level_summary(FP))
 	f.close()

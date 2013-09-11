@@ -22,13 +22,13 @@ if __name__ == "__main__":
 		elif opt in ('-o','--outputdir'):
 			outputdir = arg
 	hashobject = Fastq_Reader(inputdir,outputdir)
-	FP = glob.glob(os.path.join(inputdir,'*.fastq'))
+	fr = str(fr) + '/'
+	FP = glob.glob(os.path.join(inputdir+fr,'*.fastq'))
 	FP = [fp for fp in FP if (('.mate1.fastq' not in fp) and ('.mate2.fastq' not in fp) and ('.singleton.fastq' not in fp))]
-	FP.sort()
-	file_prefix = FP[fr]
-	file_prefix = file_prefix[file_prefix.rfind('/')+1:file_prefix.index('.fastq')]
-	read_count = hashobject.sort_read_pairs(file_prefix)
-	if read_count > 0:
-		print file_prefix,'READ COUNT:',str(read_count)
-	else:
-		print file_prefix,'NO READS'
+	for file_prefix in FP:
+		file_prefix = fr + file_prefix[file_prefix.rfind('/')+1:file_prefix.index('.fastq')]
+		read_count = hashobject.sort_read_pairs(file_prefix)
+		if read_count > 0:
+			print file_prefix,'READ COUNT:',str(read_count)
+		else:
+			print file_prefix,'NO READS'

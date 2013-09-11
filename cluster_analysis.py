@@ -140,18 +140,18 @@ class Cluster_Analysis(LSA):
 			singleton_file = open(self.input_path+cluster_prefix+'.singleton.fastq','w')
 			total_reads = 0
 			while len(sorted_reads) > 0:
-				current_id = None
+				current_id = ''
 				last = ''
 				for r in sorted_reads:
 					r_id = get_id(r)
-					if r_id[:-1] == current_id:
+					if (r_id[:-1] == current_id[:-1]) and (r_id != current_id):
 						pair_file1.write(last)
 						pair_file2.write(r)
 						last = ''
 					else:
 						singleton_file.write(last)
 						last = r
-					current_id = r_id[:-1]
+					current_id = r_id
 				total_reads += len(sorted_reads)
 				if type == 1:
 					sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d[:d.index(' ')+2])

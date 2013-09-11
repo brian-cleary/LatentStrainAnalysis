@@ -35,4 +35,4 @@ if __name__ == "__main__":
 	H = np.array(H,dtype=np.uint16)
 	nz = np.nonzero(H)[0]
 	np.save(hashobject.output_path+file_prefix+'.nonzero.npy',nz)
-	print 'sample %s has %d nonzero elements and %d total observed kmers' % (len(nz),H.sum())
+	print 'sample %s has %d nonzero elements and %d total observed kmers' % (file_prefix,len(nz),H.sum())

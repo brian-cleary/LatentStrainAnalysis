@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import sys,os,glob
+import getopt
 
 def merge_pairs(f1,f2,f0):
-	for i in range(0,8*10**6,10**5):
+	for i in range(0,2*10**6,10**5):
 		r1 = [f1.readline() for _ in range(10**5)]
 		r2 = [f2.readline() for _ in range(10**5)]
 		try:
@@ -26,26 +27,48 @@ def split_singletons(sing_path,out_prefix):
 	i = 0
 	f1 = open(sing_path)
 	for line in f1:
-		if i%16000000 == 0:
+		if i%4000000 == 0:
 			f0 = open(out_prefix+'.singleton.fastq'+split_suffix[ss],'w')
 			ss += 1
 		f0.write(line)
 		i += 1
 
 
-# python merge_and_split_pair_files.py A.fastq.1 A.fastq.2 A.fastq.sing original_reads/A
+help_message = 'usage example: python merge_and_split_pair_files.py -1 sampleA.fastq.1 -2 sampleA.fastq.2 -s sampleA.fastq.singleton -o /project/home/original_reads/sampleA'
 if __name__ == "__main__":
-	pair1,pair2,sing,out = sys.argv[1:5]
-	f1 = open(pair1)
-	f2 = open(pair2)
-	split_suffix = ['.0'+str(_) for _ in range(10)]
-	split_suffix += ['.'+str(_) for _ in range(10,999)]
-	r1len = 1
-	ss = 0
-	while r1len > 0:
-		f0 = open(out+'.interleaved.fastq'+split_suffix[ss],'w')
-		r1len = merge_pairs(f1,f2,f0)
-		ss += 1
-		f0.close()
-	split_singletons(sing,out)
+	try:
+		opts, args = getopt.getopt(sys.argv[1:],'h1:2:s:o:',["mate1=","mate2=","sing=","outputdir="])
+	except:
+		print help_message
+		sys.exit(2)
+	pair1 = None
+	pair2 = None
+	sing = None
+	for opt, arg in opts:
+		if opt in ('-h','--help'):
+			print help_message
+			sys.exit()
+		elif opt in ('-1','--mate1'):
+			pair1 = arg
+		elif opt in ('-2','--mate2'):
+			pair2 = arg
+		elif opt in ('-s','--sing'):
+			sing = arg
+		elif opt in ('-o','--outputdir'):
+			out = arg
+	if (pair1 != None) and (pair2 != None):
+		f1 = open(pair1)
+		f2 = open(pair2)
+		split_suffix = ['.00'+str(_) for _ in range(10)]
+		split_suffix += ['.0'+str(_) for _ in range(10,99)]
+		split_suffix += ['.'+str(_) for _ in range(100,999)]
+		r1len = 1
+		ss = 0
+		while r1len > 0:
+			f0 = open(out+'.interleaved.fastq'+split_suffix[ss],'w')
+			r1len = merge_pairs(f1,f2,f0)
+			ss += 1
+			f0.close()
+	if sing != None:
+		split_singletons(sing,out)
 	os.system('touch '+out)
