@@ -9,7 +9,7 @@ from streaming_eigenhashes import StreamingEigenhashes
 help_message = 'usage example: python kmer_cluster_part.py -r 1 -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/'
 if __name__ == "__main__":
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],'hr:i:o:',["filerank=","inputdir=","outputdir="])
+		opts, args = getopt.getopt(sys.argv[1:],'hr:i:o:t:',["filerank=","inputdir=","outputdir=","thresh="])
 	except:
 		print help_message
 		sys.exit(2)
@@ -27,6 +27,8 @@ if __name__ == "__main__":
 				outputdir += '/'
 		elif opt in ('-r','--filerank'):
 			fr = int(arg) - 1
+		elif opt in ('-t','--thresh'):
+			thresh = float(arg)
 	hashobject = StreamingEigenhashes(inputdir,outputdir,get_pool=-1)
 	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash.conditioned'))
 	hashobject.path_dict = {}
@@ -36,6 +38,7 @@ if __name__ == "__main__":
 	Index = np.load(hashobject.output_path+'cluster_index.npy')
 	i = fr*10**6
 	o = (i,min(10**6,2**hashobject.hash_size-i))
+	hashobject.cluster_thresh = thresh
 	Ci = hashobject.lsi_cluster_part(o,lsi,Index)
 	for ci,c in enumerate(Ci):
 		try:

@@ -147,12 +147,13 @@ class Cluster_Analysis(LSA):
 					if (r_id[:-1] == current_id[:-1]) and (r_id != current_id):
 						pair_file1.write(last)
 						pair_file2.write(r)
+						total_reads += 2
 						last = ''
 					else:
 						singleton_file.write(last)
+						total_reads += 1
 						last = r
 					current_id = r_id
-				total_reads += len(sorted_reads)
 				if type == 1:
 					sorted_reads = sorted(self.read_generator(f,raw_reads=True,max_reads=10**7),key=lambda (d): d[:d.index(' ')+2])
 				elif type == 2:

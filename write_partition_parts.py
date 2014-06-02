@@ -24,10 +24,10 @@ def max_log_lik_ratio(s,bkg,h1_prob=0.8,thresh=3.84):
 				LLR.append((llr,k))
 	return max(LLR)[1]
 
-help_message = 'usage example: python write_partition_parts.py -r 1 -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/'
+help_message = 'usage example: python write_partition_parts.py -r 1 -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/ -t /tmp/dir/'
 if __name__ == "__main__":
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],'hr:i:o:',["--filerank=","inputdir=","outputdir="])
+		opts, args = getopt.getopt(sys.argv[1:],'hr:i:o:t:',["--filerank=","inputdir=","outputdir=","tmpdir="])
 	except:
 		print help_message
 		sys.exit(2)
@@ -45,6 +45,10 @@ if __name__ == "__main__":
 			outputdir = arg
 			if outputdir[-1] != '/':
 				outputdir += '/'
+		elif opt in ('-t','--tmpdir'):
+			tmpdir = arg
+			if tmpdir[-1] != '/':
+				tmpdir += '/'
 	hashobject = Fastq_Reader(inputdir,outputdir)
 	cp = np.load(hashobject.output_path+'cluster_probs.npy')
 	cluster_probs = dict(enumerate(cp))
@@ -54,7 +58,7 @@ if __name__ == "__main__":
 	infile = Hashq_Files[fr]
 	outpart = infile[-6:-3]
 	sample_id = infile[infile.rfind('/')+1:infile.index('.hashq')]
-	tmpdir = '/broad/hptmp/bcleary/%d/' % (fr)
+	tmpdir += str(fr) + '/'
 	os.system('mkdir '+tmpdir)
 	G = [open('%s%s.%s.cols.%d' % (tmpdir,sample_id,outpart,i),'w') for i in range(0,2**hashobject.hash_size,2**hashobject.hash_size/50)]
 	f = gzip.open(infile)
@@ -111,6 +115,7 @@ if __name__ == "__main__":
 	id_vals = np.fromstring(g.readline(),sep='\t')
 	EOF = False
 	CF = {}
+	reads_written = 0
 	for a in hashobject.hash_read_generator(f):
 		while id_vals[0] < r_id:
 			id_vals = np.fromstring(g.readline(),sep='\t')
@@ -140,6 +145,7 @@ if __name__ == "__main__":
 					os.system('mkdir %s%d/' % (hashobject.output_path,best_clust))
 					CF[best_clust] = open('%s%d/%s.fastq.%s' % (hashobject.output_path,best_clust,sample_id,outpart),'a')
 			CF[best_clust].write(a[0]+'\n')
+			reads_written += 1
 		if len(CF) > 200:
 			for cfv in CF.values():
 				cfv.close()
@@ -148,4 +154,5 @@ if __name__ == "__main__":
 	for f in CF.values():
 		f.close()
 	os.system('rm -rf '+tmpdir)
+	print 'total reads written:',reads_written
 		

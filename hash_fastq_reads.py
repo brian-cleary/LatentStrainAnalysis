@@ -22,6 +22,7 @@ def kmer_bins(b,A,pfx,outfile,type):
 	current_id = None
 	pair = []
 	bins = []
+	reads_hashed = 0
 	for a in range(len(A)):
 		read_id = get_id(A[a])
 		if read_id != current_id:
@@ -29,19 +30,22 @@ def kmer_bins(b,A,pfx,outfile,type):
 				for rp in pair:
 					outfile.write(rp)
 					outfile.write(pfx+','.join([str(x) for x in bins]) + ']\n')
+					reads_hashed += 1
 				pair = []
 				bins = []
 			current_id = read_id
 			pair.append(A[a])
 		bins.append(b[a])
+	return reads_hashed
 
 help_message = 'usage example: python hash_fastq_reads.py -r 1 -i /project/home/original_reads/ -o /project/home/hashed_reads/'
 if __name__ == "__main__":
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],'hr:i:o:',["filerank=","inputdir=","outputdir="])
+		opts, args = getopt.getopt(sys.argv[1:],'hr:i:o:z',["filerank=","inputdir=","outputdir="])
 	except:
 		print help_message
 		sys.exit(2)
+	do_reverse_compliment = True
 	for opt, arg in opts:
 		if opt in ('-h','--help'):
 			print help_message
@@ -56,6 +60,8 @@ if __name__ == "__main__":
 			outputdir = arg
 			if outputdir[-1] != '/':
 				outputdir += '/'
+		elif opt in ('-z','--reversecomp'):
+			do_reverse_compliment = False
 	FP = glob.glob(os.path.join(inputdir,'*.fastq.*'))
 	file_prefix = FP[fr]
 	file_split = file_prefix[-4:]
@@ -66,12 +72,14 @@ if __name__ == "__main__":
 	g = gzip.open(hashobject.output_path+file_prefix+'.hashq'+file_split+'.gz','wb')
 	hashobject.hpfx = hashobject.hpfx + str(hashobject.kmer_size)+','
 	A = []
+	reads_hashed = 0
 	while A != None:
 		try:
-			A,B = hashobject.generator_to_bins(hashobject.read_generator(f,max_reads=25000,verbose_ids=True),rc=True)
+			A,B = hashobject.generator_to_bins(hashobject.read_generator(f,max_reads=25000,verbose_ids=True),rc=do_reverse_compliment)
 			for b in range(len(B)):
-				kmer_bins(B[b],A,hashobject.hpfx,g,read_type)
+				reads_hashed += kmer_bins(B[b],A,hashobject.hpfx,g,read_type)
 		except Exception,err:
 			print str(err)
 	f.close()
 	g.close()
+	print 'total reads hashed:',reads_hashed

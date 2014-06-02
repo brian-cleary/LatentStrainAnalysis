@@ -3,7 +3,12 @@
 import sys,os,glob
 import getopt
 
+split_suffix = ['.00'+str(_) for _ in range(10)]
+split_suffix += ['.0'+str(_) for _ in range(10,99)]
+split_suffix += ['.'+str(_) for _ in range(100,999)]
+
 def merge_pairs(f1,f2,f0):
+	reads_written = 0
 	for i in range(0,2*10**6,10**5):
 		r1 = [f1.readline() for _ in range(10**5)]
 		r2 = [f2.readline() for _ in range(10**5)]
@@ -18,20 +23,22 @@ def merge_pairs(f1,f2,f0):
 		for j in range(0,len(r1),4):
 			f0.writelines(r1[j:j+4])
 			f0.writelines(r2[j:j+4])
-	return len(r1[0])
+			reads_written += 2
+	return len(r1[0]),reads_written
 
 def split_singletons(sing_path,out_prefix):
-	split_suffix = ['.0'+str(_) for _ in range(10)]
-	split_suffix += ['.'+str(_) for _ in range(10,999)]
 	ss = 0
 	i = 0
+	reads_written = 0
 	f1 = open(sing_path)
 	for line in f1:
 		if i%4000000 == 0:
 			f0 = open(out_prefix+'.singleton.fastq'+split_suffix[ss],'w')
 			ss += 1
 		f0.write(line)
+		reads_written += .25
 		i += 1
+	return reads_written
 
 
 help_message = 'usage example: python merge_and_split_pair_files.py -1 sampleA.fastq.1 -2 sampleA.fastq.2 -s sampleA.fastq.singleton -o /project/home/original_reads/sampleA'
@@ -56,19 +63,21 @@ if __name__ == "__main__":
 			sing = arg
 		elif opt in ('-o','--outputdir'):
 			out = arg
+	mates_written = 0
+	singletons_written = 0
 	if (pair1 != None) and (pair2 != None):
 		f1 = open(pair1)
 		f2 = open(pair2)
-		split_suffix = ['.00'+str(_) for _ in range(10)]
-		split_suffix += ['.0'+str(_) for _ in range(10,99)]
-		split_suffix += ['.'+str(_) for _ in range(100,999)]
 		r1len = 1
 		ss = 0
 		while r1len > 0:
 			f0 = open(out+'.interleaved.fastq'+split_suffix[ss],'w')
-			r1len = merge_pairs(f1,f2,f0)
+			r1len,rw = merge_pairs(f1,f2,f0)
 			ss += 1
+			mates_written += rw
 			f0.close()
 	if sing != None:
-		split_singletons(sing,out)
-	os.system('touch '+out)
+		rw = split_singletons(sing,out)
+		singletons_written += rw
+	print 'mates written: %d, singletons written: %d, total reads written: %d' % (mates_written,singletons_written,mates_written+singletons_written)
+	os.system('touch '+out+'.fastq')

@@ -26,7 +26,7 @@ if __name__ == "__main__":
 				outputdir += '/'
 	fr = str(fr) + '/'
 	### this can be done in phyler_classify
-	os.system('/home/unix/bcleary/src/MetaPhylerV1.25/taxprof 0.9 %s %s /home/unix/bcleary/src/MetaPhylerV1.25/markers/tid2name.tab' % (outputdir+fr+'all.phyler.blastn.classification',outputdir+fr+'all.blastn'))
+	os.system('/seq/msctmp/bcleary/src/MetaPhylerV1.25/taxprof 0.9 %s %s /seq/msctmp/bcleary/src/MetaPhylerV1.25/markers/tid2name.tab' % (outputdir+fr+'all.phyler.blastn.classification',outputdir+fr+'all.blastn'))
 	FP = glob.glob(os.path.join(outputdir+fr,'*.count.*'))
 	total = sum([int(fp[fp.rfind('.')+1:]) for fp in FP])
 	correction_factor = 100.

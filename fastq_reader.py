@@ -32,7 +32,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 		Ids = [l.strip().split() for l in L if l[0]=='@']
 		pair_type = None
 		for i in range(len(Ids)-1):
-			if (Ids[i][0] == Ids[i+1][0]) and (len(Ids[i] > 1) and (len(Ids[i+1] > 1):
+			if (Ids[i][0] == Ids[i+1][0]) and (len(Ids[i]) > 1) and (len(Ids[i+1]) > 1):
 				if (Ids[i][1][0] == '1') and (Ids[i+1][1][0] == '2') and (Ids[i][1][1:] == Ids[i+1][1][1:]):
 					pair_type = 1
 					break
@@ -82,7 +82,10 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 						S = line.strip()
 						# make sure this looks like sequence data - will break if upper and lower AaCcTtGg are used
 						if len(set(S)) > 5:
-							raise Exception
+							if len(set(S.upper())) > 5:
+								raise Exception
+							else:
+								S = S.upper()
 						verbose_id += file_object.readline()
 						line = file_object.readline()
 						verbose_id += line
@@ -117,7 +120,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 		for l in L[x::4]:
 			for c in l.strip():
 				oc = ord(c)
-				if oc < 64:
+				if oc < 74:
 					o33 += 1
 				else:
 					o64 += 1
@@ -133,6 +136,7 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 			RP = random.sample(RP,100)
 		kmers_per_file = max(total_kmers/len(RP),5)
 		g = open(self.input_path+'random_kmers.fastq','w')
+		total = 0
 		for rp in RP:
 			f = open(rp)
 			kf = 0
@@ -147,6 +151,9 @@ class Fastq_Reader(Cluster_Analysis,Hash_Counting,Hyper_Sequences,LSA):
 					if fails > 100:
 						break
 			f.close()
+			total += kf
+			if total > total_kmers:
+				break
 		g.close()
 
 	def rand_kmer(self,f,max_seek=10**8):

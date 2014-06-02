@@ -26,7 +26,7 @@ if __name__ == "__main__":
 		elif opt in ('-p','--numproc'):
 			num_proc = int(arg)
 	### use -p option for multiprocessing
-	numproc = -1
+	num_proc = -1
 	###
 	hashobject = StreamingEigenhashes(inputdir,outputdir,get_pool=num_proc)
 	Kmer_Hash_Count_Files = glob.glob(os.path.join(hashobject.input_path,'*.count.hash.conditioned'))

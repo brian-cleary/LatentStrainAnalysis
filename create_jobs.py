@@ -14,6 +14,7 @@ JobParams = {
 		'outfile': """HashReads_ArrayJob.q""",
 		'array': ["""original_reads/""","""*.fastq.*"""],
 		'header': ["""#BSUB -J HashReads[1-""","""#BSUB -o PROJECT_HOME/Logs/HashReads-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/HashReads-Err-%I.err""","""#BSUB -q hour""","""#BSUB -W 3:56""","""#BSUB -M 8"""],
+		# add -z option to omit reverse complimenting
 		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python hash_fastq_reads.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/original_reads/ -o PROJECT_HOME/hashed_reads/"""]},
 	'MergeHash': {
 		'outfile': """MergeHash_ArrayJob.q""",
@@ -36,36 +37,44 @@ JobParams = {
 		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python kmer_corpus.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'KmerLSI': {
 		'outfile': """KmerLSI_Job.q""",
-		'header': ["""#BSUB -J KmerLSI""","""#BSUB -o PROJECT_HOME/Logs/KmerLSI-Out.out""","""#BSUB -e PROJECT_HOME/Logs/KmerLSI-Err.err""","""#BSUB -q week""","""#BSUB -R 'rusage[mem=4]'""","""#BSUB -M 10""","""source /broad/software/scripts/useuse""","""reuse Python-2.7""","""export PYTHONPATH=/home/unix/bcleary/src/lib/python2.7/site-packages:$PYTHONPATH""","""python -m Pyro4.naming -n 0.0.0.0 > PROJECT_HOME/Logs/nameserver.log 2>&1 &""","""P1=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker1.log 2>&1 &""","""P2=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker2.log 2>&1 &""","""P3=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker3.log 2>&1 &""","""P4=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker4.log 2>&1 &""","""P5=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker5.log 2>&1 &""","""P6=$!""","""python -m gensim.models.lsi_dispatcher > PROJECT_HOME/Logs/dispatcher.log 2>&1 &""","""P7=$!"""],
+		'header': ["""#BSUB -J KmerLSI""","""#BSUB -o PROJECT_HOME/Logs/KmerLSI-Out.out""","""#BSUB -e PROJECT_HOME/Logs/KmerLSI-Err.err""","""#BSUB -q week""","""#BSUB -n 6""","""#BSUB -R 'rusage[mem=4] span[hosts=1]'""","""#BSUB -M 10""","""source /broad/software/scripts/useuse""","""reuse Python-2.7""","""export PYTHONPATH=/seq/msctmp/bcleary/src/lib/python2.7/site-packages:$PYTHONPATH""","""python -m Pyro4.naming -n 0.0.0.0 > PROJECT_HOME/Logs/nameserver.log 2>&1 &""","""P1=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker1.log 2>&1 &""","""P2=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker2.log 2>&1 &""","""P3=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker3.log 2>&1 &""","""P4=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker4.log 2>&1 &""","""P5=$!""","""python -m gensim.models.lsi_worker > PROJECT_HOME/Logs/worker5.log 2>&1 &""","""P6=$!""","""python -m gensim.models.lsi_dispatcher > PROJECT_HOME/Logs/dispatcher.log 2>&1 &""","""P7=$!"""],
 		'body': ["""python kmer_lsi.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/""","""kill $P1 $P2 $P3 $P4 $P5 $P6 $P7"""]},
 	'KmerClusterIndex': {
 		'outfile': """KmerClusterIndex_Job.q""",
-		'header': ["""#BSUB -J KmerClusterIndex""","""#BSUB -o PROJECT_HOME/Logs/KmerClusterIndex-Out.out""","""#BSUB -e PROJECT_HOME/Logs/KmerClusterIndex-Err.err""","""#BSUB -q week""","""#BSUB -W 71:58""","""#BSUB -R 'rusage[mem=1]'""","""#BSUB -M 15"""],
-		'body': ["""python kmer_cluster_index.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
+		'header': ["""#BSUB -J KmerClusterIndex""","""#BSUB -o PROJECT_HOME/Logs/KmerClusterIndex-Out.out""","""#BSUB -e PROJECT_HOME/Logs/KmerClusterIndex-Err.err""","""#BSUB -q week""","""#BSUB -R 'rusage[mem=1]'""","""#BSUB -M 35"""],
+		# adjust cluster thresh (-t) as necessary
+		'body': ["""python kmer_cluster_index.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/ -t 0.7"""]},
 	'KmerClusterParts': {
 		'outfile': """KmerClusterParts_ArrayJob.q""",
+		# number of tasks is 2**hash_size/10**6 + 1
 		#'array': ["""hashed_reads/""","""*.hashq.*"""],
 		'header': ["""#BSUB -J KmerClusterParts[1-""","""#BSUB -o PROJECT_HOME/Logs/KmerClusterParts-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/KmerClusterParts-Err-%I.err""","""#BSUB -q hour""","""#BSUB -W 3:59""","""#BSUB -R 'rusage[mem=1:argon_io=3]'""","""#BSUB -M 4"""],
-		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python kmer_cluster_part.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
+		###!!!
+		# adjust cluster thresh (-t) as necessary - probably same as Index step (maybe slightly higher)
+		###!!!
+		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python kmer_cluster_part.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/ -t 0.7"""]},
 	'KmerClusterMerge': {
 		'outfile': """KmerClusterMerge_ArrayJob.q""",
+		# number of tasks is number of clusters
 		#'array': ["""hashed_reads/""","""*.hashq.*"""],
 		'header': ["""#BSUB -J KmerClusterMerge[1-""","""#BSUB -o PROJECT_HOME/Logs/KmerClusterMerge-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/KmerClusterMerge-Err-%I.err""","""#BSUB -q hour""","""#BSUB -W 3:59""","""#BSUB -R 'rusage[mem=1]'""","""#BSUB -M 8"""],
 		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python kmer_cluster_merge.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/cluster_vectors/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'KmerClusterCols': {
 		'outfile': """KmerClusterCols_Job.q""",
-		'header': ["""#BSUB -J KmerClusterCols""","""#BSUB -o PROJECT_HOME/Logs/KmerClusterCols-Out.out""","""#BSUB -e PROJECT_HOME/Logs/KmerClusterCols-Err.err""","""#BSUB -q flower""","""#BSUB -W 71:58""","""#BSUB -R 'rusage[mem=40]'""","""#BSUB -M 150"""],
+		'header': ["""#BSUB -J KmerClusterCols""","""#BSUB -o PROJECT_HOME/Logs/KmerClusterCols-Out.out""","""#BSUB -e PROJECT_HOME/Logs/KmerClusterCols-Err.err""","""#BSUB -q flower""","""#BSUB -W 71:58""","""#BSUB -R 'rusage[mem=40]'""","""#BSUB -M 70"""],
 		'body': ["""python kmer_cluster_cols.py -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
 	'ReadPartitions': {
 		'outfile': """ReadPartitions_ArrayJob.q""",
 		'array': ["""hashed_reads/""","""*.hashq.*"""],
+		# MAKE SURE TO SET TMP FILE LOCATION
 		'header': ["""#BSUB -J ReadPartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/ReadPartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/ReadPartitions-Err-%I.err""","""#BSUB -q week""","""#BSUB -W 45:10""","""#BSUB -R 'rusage[mem=3:argon_io=3]'""","""#BSUB -M 20"""],
-		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python write_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/"""]},
+		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python write_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/hashed_reads/ -o PROJECT_HOME/cluster_vectors/ -t TMPDIR"""]},
 	'MergeIntermediatePartitions': {
 		'outfile': """MergeIntermediatePartitions_ArrayJob.q""",
 		'array': ["""cluster_vectors/""","""*.cluster.npy"""],
 		'header': ["""#BSUB -J MergeIntermediatePartitions[1-""","""#BSUB -o PROJECT_HOME/Logs/MergeIntermediatePartitions-Out-%I.out""","""#BSUB -e PROJECT_HOME/Logs/MergeIntermediatePartitions-Err-%I.err""","""#BSUB -q hour""","""#BSUB -W 1:55""","""#BSUB -M 2""","""#BSUB -R 'rusage[argon_io=3]'"""],
 		'body': ["""sleep $(($LSB_JOBINDEX % 60))""","""python merge_partition_parts.py -r ${LSB_JOBINDEX} -i PROJECT_HOME/cluster_vectors/ -o PROJECT_HOME/read_partitions/"""]},
+	# Check to make sure there are no files remaining in cluster_vectors/PARTITION_NUM/
 	'SplitPairs': {
 		'outfile': """SplitPairs_ArrayJob.q""",
 		'array': ["""cluster_vectors/""","""*.cluster.npy"""],
@@ -89,7 +98,7 @@ JobParams = {
 
 CommonElements = {
 	'header': ["""#!/bin/bash"""],
-	'body': ["""source /broad/software/scripts/useuse""","""reuse Python-2.7""","""export PYTHONPATH=/home/unix/bcleary/src/lib/python2.7/site-packages:$PYTHONPATH""","""cd /home/unix/bcleary/projects/LatentStrainAnalysis""","""echo Date: `date`""","""t1=`date +%s`"""],
+	'body': ["""source /broad/software/scripts/useuse""","""reuse Python-2.7""","""export PYTHONPATH=/seq/msctmp/bcleary/src/lib/python2.7/site-packages:$PYTHONPATH""","""cd /seq/msctmp/bcleary/LatentStrainAnalysis""","""echo Date: `date`""","""t1=`date +%s`"""],
 	'footer': ["""[ $? -eq 0 ] || echo 'JOB FAILURE: $?'""","""echo Date: `date`""","""t2=`date +%s`""","""tdiff=`echo 'scale=3;('$t2'-'$t1')/3600' | bc`""","""echo 'Total time:  '$tdiff' hours'"""]
 }
 					

@@ -87,7 +87,8 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			print ci,len(Clusters)
 		return Index
 
-	def lsi_cluster_part(self,offsets,lsi,Index,cluster_thresh=0.75):
+	def lsi_cluster_part(self,offsets,lsi,Index):
+		cluster_thresh = self.cluster_thresh
 		Clusters = [np.empty((offsets[1],),dtype=np.int64) for _ in range(Index.shape[0])]
 		Sizes = np.zeros(Index.shape[0],dtype=np.int64)
 		num_best = 5
@@ -128,7 +129,8 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 						break
 		return [c[:Sizes[i]] for i,c in enumerate(Clusters)]
 
-	def lsi_kmer_clusters(self,lsi,Index,c0,cs=10**5,cluster_thresh=0.75):
+	def lsi_kmer_clusters(self,lsi,Index,c0,cs=10**5):
+		cluster_thresh = self.cluster_thresh
 		Clusters = [np.empty((cs,),dtype=np.int64) for _ in range(Index.shape[0])]
 		Sizes = np.zeros(Index.shape[0],dtype=np.int64)
 		#for j in range(0,2**self.hash_size,10**7):
@@ -143,7 +145,8 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 		self.pool.join()
 		return [Clusters[i][:Sizes[i]] for i in range(len(Clusters))]
 
-	def merge_index(self,V,I,C,thresh=0.75):
+	def merge_index(self,V,I,C):
+		thresh = self.cluster_thresh
 		MergeFits = defaultdict(list)
 		for doc in V:
 			if len(doc) > 0:
@@ -166,7 +169,8 @@ class StreamingEigenhashes(Hash_Counting,Hyper_Sequences,LSA):
 			C[k] += len(v)
 		return C,I
 
-	def collapse_index(self,I,C,combine_thresh=0.75):
+	def collapse_index(self,I,C):
+		combine_thresh = self.cluster_thresh
 		remove_clusters = {}
 		D = distance.pdist(I,'cosine')
 		D = D < (1 - combine_thresh)
