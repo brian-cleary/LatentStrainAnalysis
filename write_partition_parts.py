@@ -9,7 +9,7 @@ import numpy as np
 from collections import defaultdict
 from fastq_reader import Fastq_Reader
 
-def max_log_lik_ratio(s,bkg,h1_prob=0.8,thresh=3.84):
+def max_log_lik_ratio(s,bkg,h1_prob=0.8,thresh1=3.84,thresh2=6.635):
 	LLR = [(None,None)]
 	read_match_sum = s[-1]
 	del s[-1]
@@ -20,9 +20,20 @@ def max_log_lik_ratio(s,bkg,h1_prob=0.8,thresh=3.84):
 			v2 = read_match_sum*bkg[k]*(1-bkg[k])
 			m2 = read_match_sum*bkg[k]
 			llr = np.log(v2**.5/v1**.5) + .5*((sect_sum-m2)**2/v2 - (sect_sum-m1)**2/v1)
-			if llr > thresh:
-				LLR.append((llr,k))
-	return max(LLR)[1]
+	#		if llr > thresh:
+	#			LLR.append((llr,k))
+	#return max(LLR)[1]
+			LLR.append((llr,k))
+	LLR.sort(reverse=True)
+	K = []
+	if LLR[0][0] > thresh1:
+		K.append(LLR[0][1])
+	for llr,k in LLR[1:]:
+		if llr > thresh2:
+			K.append(k)
+		else:
+			break
+	return K
 
 help_message = 'usage example: python write_partition_parts.py -r 1 -i /project/home/hashed_reads/ -o /project/home/cluster_vectors/ -t /tmp/dir/'
 if __name__ == "__main__":
@@ -116,6 +127,7 @@ if __name__ == "__main__":
 	EOF = False
 	CF = {}
 	reads_written = 0
+	unique_reads_written = 0
 	for a in hashobject.hash_read_generator(f):
 		while id_vals[0] < r_id:
 			id_vals = np.fromstring(g.readline(),sep='\t')
@@ -136,8 +148,10 @@ if __name__ == "__main__":
 				id_vals = np.fromstring(g.readline(),sep='\t')
 			except:
 				break
-		best_clust = max_log_lik_ratio(D,cluster_probs)
-		if best_clust != None:
+		#best_clust = max_log_lik_ratio(D,cluster_probs)
+		#if best_clust != None:
+		best_clusts = max_log_lik_ratio(D,cluster_probs)
+		for best_clust in best_clusts:
 			if best_clust not in CF:
 				try:
 					CF[best_clust] = open('%s%d/%s.fastq.%s' % (hashobject.output_path,best_clust,sample_id,outpart),'a')
@@ -146,6 +160,8 @@ if __name__ == "__main__":
 					CF[best_clust] = open('%s%d/%s.fastq.%s' % (hashobject.output_path,best_clust,sample_id,outpart),'a')
 			CF[best_clust].write(a[0]+'\n')
 			reads_written += 1
+		if len(best_clusts) > 0:
+			unique_reads_written += 1
 		if len(CF) > 200:
 			for cfv in CF.values():
 				cfv.close()
@@ -155,4 +171,5 @@ if __name__ == "__main__":
 		f.close()
 	os.system('rm -rf '+tmpdir)
 	print 'total reads written:',reads_written
+	print 'unique reads written:',unique_reads_written
 		

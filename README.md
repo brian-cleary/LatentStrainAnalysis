@@ -8,7 +8,6 @@ Before getting started, place the code for LSA in some directory (henceforth "th
 		$ mkdir /project/home/original_reads
 		$ mkdir /project/home/hashed_reads
 		$ mkdir /project/home/cluster_vectors
-		$ mkdir /project/home/cluster_vectors/intermediate_clusters
 		$ mkdir /project/home/read_partitions
 
 Begin by splitting the original reads (from many samples) into many small files
