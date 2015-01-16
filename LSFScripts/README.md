@@ -19,7 +19,7 @@ Begin by splitting the original reads (from many samples) into many small files
 		If your input files are significantly different from paired fastq files separated into 2 parts (.fastq.1 and .fastq.2) plus a singleton file (.single.fastq.1, then you will either need to modify these python files, or just take it upon yourself to split your files into chunks containing ~1million reads each, and named like: sample_id.fastq.xxx, where ".xxx" is the chunk number (eg '.021')
 		
 
-Create a k-mer hash function by drawing a bunch of random hyperplanes
+Create a k-mer hash function by drawing a bunch of random hyperplanes. If you want to adjust the k-mer length or hash size, alter the "-k" or "-s" arguments in the create_hash.py command of CreateHash_Job.q.
 
 	$ python LSFScripts/create_jobs.py -j CreateHash -i ./
 		
