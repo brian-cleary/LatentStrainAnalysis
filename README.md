@@ -1,20 +1,28 @@
-Welcome to the Latent Strain Analysis (LSA) code repo!
+Welcome to the Latent Strain Analysis (LSA) code repository!
 
-LSA was developed in Python 2.7, and requires NumPy, SciPy, and Gensim (for streaming SVD calculation). Pyro4 is also required for running distributed, streaming SVD calculations, which are used in the LSF version of the tool. For the single instance version used in "Getting Started", GNU parallel (http://www.gnu.org/software/parallel/) is needed to make use of multiple cores.
+LSA was developed as a pre-assembly tool for partitioning metagenomic reads. It uses a hyperplane hashing function and streaming SVD in order to find covariance relations between k-mers. The code, and the process outline in LSFScripts in particular, have been optimized to scale to massive data sets in fixed memory with a highly distributed computing environment.
+
+Dependencies
+	Python (2.7)
+	NumPy
+	SciPy
+	Gensim
+	GNU Parallel (http://www.gnu.org/software/parallel/) for the single-instance version
+	Pyro4 for the LSF version
 
 GETTING STARTED
 
-To get started, download the repo (eg via git clone). Nect, unpack testData.tar.gz (into original_reads/). This folder contains a subsample of 10k reads from each of the 18 metagenomic samples used in Sharon et. al. (SRA052203), and in the original LSA methods paper. Each sample has been randomly spiked with 0-2,000 mock reads from a Bacillus thuringiensis plasmid (NG_035027.1).
+To get started, download the repo (eg via git clone). Next, unpack testData.tar.gz (into original_reads/). This folder contains a subsample of 10k reads from each of the 18 metagenomic samples used in Sharon et. al. (SRA052203), and in the original LSA methods paper. Each sample has been randomly spiked with 0-2,000 mock reads from a Bacillus thuringiensis plasmid (NG_035027.1).
 
-Begin by performing some hashing tasks with 6 cores, k-mers of length 33, and a hash size of 2^22:
+Begin by performing some hashing tasks using 6 threads, k-mers of length 33, and a hash size of 2^22:
 
 	$ bash HashCounting.sh 6 33 22
 
-Next, calculate the SVD and cluster the hased k-mers with 6 cores, a hash size of 2^22 and a cluster threshold of 0.8:
+Next, calculate the SVD and cluster the hashed k-mers using 6 threads, a hash size of 2^22 and a cluster threshold of 0.8:
 
 	$ bash KmerSVDClustering.sh 6 22 .8
 
-Finally, partition the original reads (4 cores):
+Finally, partition the original reads (4 threads):
 
 	$ bash ReadPartitioning.sh 4
 
@@ -31,4 +39,4 @@ Since the process includes several points of randomization, the results from eac
 
 ANALYZING LARGER COLLECTIONS
 
-LSA has been written to be highly efficient in analyzing very large collections. For data sets larger than a few Gb, significant gains in wall time can be made by running in a cluster environment. In these cases, the process is essentially the same as what is outlined above. Detailed steps and job array submission scripts can be found in LSFscripts/README.md.
+LSA has been written to be highly efficient in analyzing very large collections. For data sets larger than a few Gb, significant gains in wall time can be made by running in a cluster environment. In these cases, the process is essentially the same as what is outlined above. Detailed steps and job array submission scripts can be found in LSFScripts/README.md.

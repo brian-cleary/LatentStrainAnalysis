@@ -122,7 +122,7 @@ Partition all the read chunks
 	
 	$ sed 's/TMPDIR/\/your\/tmp\/dir/g' < LSFScripts/ReadPartitions_ArrayJob.q | bsub
 		
-	If a few of these fail, it's not super critial, but if a large number fail you'll want to resubmit them.
+	If a few of these fail, it's not super critical, but if a large number fail you'll want to resubmit them.
 	
 
 Merge the partition chunks
