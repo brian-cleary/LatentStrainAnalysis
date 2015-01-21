@@ -79,7 +79,7 @@ Writing martix rows to separate files and local (sample) conditioning
 
 Calculating the SVD (streaming!)
 
-	$ python LSFScripts/create_jobs.py -j KmerLSI_Job.q -i ./
+	$ python LSFScripts/create_jobs.py -j KmerLSI -i ./
 	
 	$ bsub < LSFScripts/KmerLSI_Job.q
 		

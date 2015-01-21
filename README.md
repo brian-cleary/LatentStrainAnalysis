@@ -8,12 +8,12 @@ Dependencies
 	NumPy
 	SciPy
 	Gensim
-	GNU Parallel (http://www.gnu.org/software/parallel/) for the single-instance version
+	GNU Parallel (http://www.gnu.org/software/parallel/) for the single-instance version. Install like: (wget -O - pi.dk/3 || curl pi.dk/3/) | bash
 	Pyro4 for the LSF version
 
 GETTING STARTED
 
-To get started, make sure you have the dependencies listed above (you'll need GNU Parallel, but not Pyro4), then download the repo (eg via git clone). Next, unpack testData.tar.gz (into original_reads/). This folder contains a subsample of 10k reads from each of the 18 metagenomic samples used in Sharon et. al. (SRA052203), and in the original LSA methods paper. Each sample has been randomly spiked with 0-2,000 mock reads from a Bacillus thuringiensis plasmid (NG_035027.1).
+To get started, make sure you have the dependencies listed above (you'll need GNU Parallel, but not Pyro4), then download the repo (eg via git clone). Next, unpack testData.tar.gz (into original_reads/). This folder contains a subsample of 10k reads from each of the 18 metagenomic samples used in Sharon et. al. (SRA052203), and in the original LSA methods paper. Each sample has been randomly spiked with 0-2,000 mock reads from a Bacillus thuringiensis plasmid (NG_035027.1). Note that there is one file per sample, that mate pairs are interleaved, and that files are named sample_id.*.fastq.
 
 Begin by performing some hashing tasks using 6 threads, k-mers of length 33, and a hash size of 2^22:
 
