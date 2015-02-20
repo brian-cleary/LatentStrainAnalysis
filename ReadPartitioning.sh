@@ -20,7 +20,7 @@ parallel -j $numThreads --no-notice --halt-on-error 2 \
 python LSA/write_partition_parts.py -r {} -i hashed_reads/ -o cluster_vectors/ -t tmp/ >> Logs/ReadPartitions.log 2>&1; \
 if [ $? -ne 0 ]; then exit 1; fi' \
 ::: $(seq 1 $numInputFiles)
-if [ $? -ne 0 ]; then exit 1; fi
+if [ $? -ne 0 ]; then echo "printing end of last log file..."; tail Logs/ReadPartitions.log; exit 1; fi
 rm -r tmp
 
 # MergeIntermediatePartitions
@@ -31,7 +31,7 @@ parallel -j $numThreads --no-notice --halt-on-error 2 \
 python LSA/merge_partition_parts.py -r {} -i cluster_vectors/ -o read_partitions/ >> Logs/MergeIntermediatePartitions.log 2>&1; \
 if [ $? -ne 0 ]; then exit 1; fi' \
 ::: $(seq 1 $numClusterTasks)
-if [ $? -ne 0 ]; then exit 1; fi
+if [ $? -ne 0 ]; then echo "printing end of last log file..."; tail Logs/MergeIntermediatePartitions.log; exit 1; fi
 
 echo $(date) Read partitioning is complete
 
