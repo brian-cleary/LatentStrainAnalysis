@@ -19,7 +19,7 @@ Begin by splitting the original reads (from many samples) into many small files:
 
 	$ bsub < LSFScripts/SplitInput_ArrayJob.q
 
-The purpose of this is to create one small file that can be operated on by a single task in a distributed environment. The size of many job arrays downstream from this point are set by the number of chunks created in this step. Note that this code assumes the files are named sample_id.*.fastq.1 and sample_id.*.fastq.2 for paired reads. If you used some other naming convention, this needs to be reflected in line 26 in array_merge.py:
+The purpose of this is to create many small files that can each be operated on by a single task in a distributed environment. The size of many job arrays downstream from this point are set by the number of chunks created in this step. Note that this code assumes the files are named sample_id.*.fastq.1 and sample_id.*.fastq.2 for paired reads. If you used some other naming convention, this needs to be reflected in line 26 in array_merge.py:
 
 **WARNING**	
 
