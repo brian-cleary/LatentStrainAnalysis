@@ -57,3 +57,7 @@ Since the process includes several points of randomization, the results from eac
     partition 112: 142 spiked reads out of 492 total reads in partition 112 (28%)
     partition 129: 4 spiked reads out of 506 total reads in partition 129 (0%)
 
+Analyzing larger collections
+----------------------------
+
+LSA has been written to be highly efficient in analyzing very large collections. For data sets larger than a few Gb, significant gains in wall time can be made by running in a cluster environment. In these cases, the process is essentially the same as what is outlined above. Detailed steps and job array submission scripts can be found in LSFScripts/README.md.
