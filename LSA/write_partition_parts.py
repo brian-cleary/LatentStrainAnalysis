@@ -131,10 +131,16 @@ if __name__ == "__main__":
 		for a in hashobject.hash_read_generator(f):
 			while id_vals[0] < r_id:
 				id_vals = np.fromstring(g.readline(),sep='\t')
+				# revert to gross old behavior
+				if len(id_vals) == 0:
+					id_vals = [-1]
 				if id_vals[0] == -1:
 					try:
 						g = G.next()
 						id_vals = np.fromstring(g.readline(),sep='\t')
+						# revert to gross old behavior
+						if len(id_vals) == 0:
+							id_vals = [-1]
 					except:
 						EOF = True
 			if EOF:
@@ -146,6 +152,9 @@ if __name__ == "__main__":
 					D[clust] += id_vals[1]
 				try:
 					id_vals = np.fromstring(g.readline(),sep='\t')
+					# revert to gross old behavior
+					if len(id_vals) == 0:
+						id_vals = [-1]
 				except:
 					break
 			#best_clust = max_log_lik_ratio(D,cluster_probs)
